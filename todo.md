@@ -1,0 +1,23 @@
+# Project TODO
+
+- [x] Document the Autopilot concept audit, including product gaps, risks, safety principles, and differentiators.
+- [x] Define a local-first companion architecture that keeps file watching and Git execution on the user device while the web app manages preferences and visibility.
+- [x] Add persistent database models for repositories, automation policies, extension preferences, activity records, recovery actions, and notification preferences.
+- [x] Implement typed server procedures for reading and updating dashboard data, policies, extension settings, recovery actions, and opt-in alerts.
+- [x] Build an elegant dashboard that presents repository status, automation posture, recent commits, alerts, activity history, and meaningful health signals.
+- [x] Build policy controls for protected branches, debounce timing, approval mode, ignore rules, and secret-risk handling, with safe defaults.
+- [x] Build a commit review and recovery experience for queued actions, detailed logs, undo, and revert paths.
+- [x] Build an extensions hub for discovering, enabling, configuring, and monitoring future IDE, Git-host, notification, and team-workflow extensions.
+- [x] Build productivity and repository-health insights that promote reviewed, safe automation rather than automatic pushes by default.
+- [x] Build opt-in alert preferences and deliver an owner notification only after an alert category has been explicitly enabled.
+- [x] Write and run Vitest coverage for policy validation, extension toggles, recovery actions, and notification opt-in protections.
+- [x] Add a dashboard error state and a dedicated recent-commits view sourced from persisted activity data.
+- [x] Implement persisted queued-action records with approve and reject controls plus detailed review history.
+- [x] Replace extension configuration placeholders with saved configuration controls and visible extension health status.
+- [x] Add concrete productivity and repository-health insights for review rates, blocks, pauses, recovery, and protected-branch posture.
+- [x] Visually verify the desktop and mobile dashboard experiences and resolve presentation issues.
+- [x] Surface a reviewed-actions history with decision outcome, branch, risk level, review timestamp, and recorded metadata.
+- [x] Add a protected-branch posture insight that compares policy coverage to each repository’s default branch.
+- [x] Evaluate protected-branch coverage against each repository’s own persisted automation policy.
+- [x] Add deterministic coverage for the per-repository protected-branch posture calculation.
+- [ ] Save a final checkpoint after confirming all completed items are marked complete.
