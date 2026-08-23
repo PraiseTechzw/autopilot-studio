@@ -20,4 +20,4 @@
 - [x] Add a protected-branch posture insight that compares policy coverage to each repository’s default branch.
 - [x] Evaluate protected-branch coverage against each repository’s own persisted automation policy.
 - [x] Add deterministic coverage for the per-repository protected-branch posture calculation.
-- [ ] Save a final checkpoint after confirming all completed items are marked complete.
+- [x] Save a final checkpoint after confirming all completed items are marked complete.
