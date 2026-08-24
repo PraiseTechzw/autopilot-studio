@@ -4,10 +4,7 @@
   "outputDirectory": "dist/public",
   "functions": {
     "api/index.js": {
-      "includeFiles": [
-        "dist/vercel.js",
-        "dist/public/**"
-      ]
+      "includeFiles": "dist/**"
     }
   },
   "rewrites": [
