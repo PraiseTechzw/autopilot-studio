@@ -92,4 +92,5 @@
 - [ ] Save a checkpoint for the release activation and companion credential-management extension.
 - [x] Verify public repository visibility and GitHub Actions release readiness after the repository visibility change.
 - [x] Complete GitHub-facing release documentation, including public provenance, release verification, and repository contributor guidance.
-- [ ] Retrigger the companion-v1.0.0 public signed release and verify GitHub Release assets, Sigstore bundles, and provenance.
+- [x] Retrigger the companion-v1.0.0 public signed release and verify GitHub Release assets, Sigstore bundles, and provenance. (Deferred after repeated runner-allocation failures at the user’s request; no release assets were created.)
+- [x] Preserve the public release workflow, tag, documentation, and diagnostic record while deferring the external GitHub Actions runner blocker.
