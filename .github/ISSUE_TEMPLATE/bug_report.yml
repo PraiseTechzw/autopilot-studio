@@ -1,0 +1,26 @@
+name: Bug report
+description: Report an unexpected Studio or Companion behavior without disclosing sensitive local data.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include source code, diffs, file names, local paths, pairing codes, tokens, private keys, or Git credentials. Use private security reporting for vulnerabilities."
+  - type: input
+    id: version
+    attributes:
+      label: Studio or Companion version
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and safe reproduction steps
+    validations:
+      required: true

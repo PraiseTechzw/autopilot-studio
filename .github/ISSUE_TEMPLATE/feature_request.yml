@@ -1,0 +1,24 @@
+name: Feature request
+description: Propose an improvement while preserving local-first Git safety boundaries.
+title: "feature: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Local-first and safety impact
+      description: Explain how the proposal avoids source upload and preserves explicit Git approvals.
+    validations:
+      required: true

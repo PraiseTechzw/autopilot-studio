@@ -4,11 +4,18 @@ on:
   push:
     tags:
       - "companion-v*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing companion-v<version> tag to package and release"
+        required: true
+        type: string
 
 permissions:
   contents: write
   id-token: write
   attestations: write
+  artifact-metadata: write
 
 jobs:
   release:
@@ -18,6 +25,7 @@ jobs:
       - name: Check out release tag
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.release_tag || github.ref }}
           fetch-depth: 0
 
       - name: Set up Node.js 20
@@ -29,7 +37,7 @@ jobs:
 
       - name: Build deterministic source bundles
         env:
-          COMPANION_VERSION: ${{ github.ref_name }}
+          COMPANION_VERSION: ${{ inputs.release_tag || github.ref_name }}
         run: |
           export COMPANION_VERSION="${COMPANION_VERSION#companion-v}"
           node scripts/package-companion.mjs
@@ -54,4 +62,5 @@ jobs:
       - name: Create GitHub release with signatures
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" release/* --title "Autopilot Companion ${{ github.ref_name }}" --generate-notes
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: gh release create "$RELEASE_TAG" release/* --title "Autopilot Companion $RELEASE_TAG" --generate-notes

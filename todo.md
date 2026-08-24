@@ -90,3 +90,6 @@
 - [x] Add tests and desktop/mobile validation for release availability and device lifecycle controls.
 - [x] Request explicit confirmation before creating and pushing the companion-v1.0.0 release tag.
 - [ ] Save a checkpoint for the release activation and companion credential-management extension.
+- [x] Verify public repository visibility and GitHub Actions release readiness after the repository visibility change.
+- [x] Complete GitHub-facing release documentation, including public provenance, release verification, and repository contributor guidance.
+- [ ] Retrigger the companion-v1.0.0 public signed release and verify GitHub Release assets, Sigstore bundles, and provenance.
