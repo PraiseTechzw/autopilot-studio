@@ -60,3 +60,16 @@
 - [x] Add an explicit rejected GitHub OAuth feedback state and test the complete OAuth feedback-state matrix.
 - [x] Visually verify the monitoring, wizard, and OAuth feedback experience on desktop and mobile.
 - [x] Save a checkpoint for the completed monitoring and setup workflow extension.
+- [x] Define the executable CLI command contract, safety defaults, approval gate, policy freshness requirements, and explicit local Git boundaries.
+- [x] Implement local repository inspection and metadata-only candidate preparation without transmitting file names, diffs, source contents, or Git credentials.
+- [x] Implement an approval-gated local Git executor for commit and push actions, including branch protection, dirty-state rechecks, and safe receipt reporting.
+- [x] Allow a separately approved push from a clean worktree while rechecking branch, policy, and repository state after push approval.
+- [x] Implement a file-watch command that debounces local changes, stops on unsafe repository states, and requires explicit opt-in to continuous execution.
+- [x] Add CLI configuration commands, safe defaults, clear dry-run output, and comprehensive installation and operation documentation.
+- [x] Add deterministic Vitest coverage for policy gating, branch protection, Git command construction, and watch-mode safety behavior.
+- [x] Verify CLI syntax, unit tests, and a disposable local Git repository dry-run without committing or pushing project files.
+- [x] Implement a true settling debounce and paused-on-unsafe-state behavior for the explicit opt-in local watch command.
+- [x] Add safe local configuration commands for inspecting the companion config path and updating non-secret execution defaults.
+- [x] Add deterministic tests for commit and push Git command construction and watcher pause behavior on unsafe local repository states.
+- [x] Refactor the watch scheduling flow into testable local helpers and verify that an unsafe-state error pauses future execution attempts.
+- [ ] Save a checkpoint for the completed executable companion CLI.
