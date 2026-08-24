@@ -59,4 +59,4 @@
 - [x] Add rendered UI validation for monitoring snapshot badges and setup milestone completion states.
 - [x] Add an explicit rejected GitHub OAuth feedback state and test the complete OAuth feedback-state matrix.
 - [x] Visually verify the monitoring, wizard, and OAuth feedback experience on desktop and mobile.
-- [ ] Save a checkpoint for the completed monitoring and setup workflow extension.
+- [x] Save a checkpoint for the completed monitoring and setup workflow extension.
