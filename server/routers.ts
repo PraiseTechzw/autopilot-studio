@@ -6,6 +6,7 @@ import {
   createRepositoryForUser,
   createQueuedAction,
   getNotificationPreferences,
+  getMonitoringSnapshot,
   getRepositoryForUser,
   getStudioSnapshot,
   saveAutomationPolicy,
@@ -70,6 +71,7 @@ export const appRouter = router({
   team: teamRouter,
   studio: router({
     dashboard: protectedProcedure.query(({ ctx }) => getStudioSnapshot(ctx.user.id)),
+    monitoring: protectedProcedure.query(({ ctx }) => getMonitoringSnapshot(ctx.user.id)),
     connectRepository: protectedProcedure.input(repositoryInput).mutation(async ({ ctx, input }) => {
       const repositoryId = await createRepositoryForUser({ userId: ctx.user.id, ...input });
       if (!repositoryId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Repository could not be saved." });

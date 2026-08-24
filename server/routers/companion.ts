@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createCompanionDevice, createCompanionPairing, consumeCompanionPairing, getCompanionActionForDevice, getCompanionPolicy, saveExecutionReceipt } from "../companionDb";
+import { acknowledgeCompanionPolicySnapshot, createCompanionDevice, createCompanionPairing, consumeCompanionPairing, getCompanionActionForDevice, getCompanionPolicy, recordCompanionPolicySnapshot, saveExecutionReceipt } from "../companionDb";
 import { authenticateCompanion, policySnapshotPayload, sha256, signPolicyDigest } from "../companionProtocol";
 import { createQueuedAction, writeActivity } from "../db";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
@@ -47,7 +47,21 @@ export const companionRouter = router({
     const policyData = await getCompanionPolicy(device.userId, repositoryId);
     if (!policyData) throw new TRPCError({ code: "NOT_FOUND", message: "Repository policy not found for this companion." });
     const policyReceipt = policySnapshotPayload(policyData.policy, policyData.repository, policyData.approvalRule);
+    await recordCompanionPolicySnapshot({ companionDeviceId: device.id, repositoryId, policyRevision: policyData.policy.revision, policyDigest: policyReceipt.policyDigest, issuedAt: new Date(policyReceipt.snapshot.issuedAt), expiresAt: new Date(policyReceipt.snapshot.expiresAt) });
     return { ...policyReceipt, signatureAlgorithm: "HMAC-SHA256/device-bound" as const, signature: signPolicyDigest(envelope.token, policyReceipt.policyDigest) };
+  }),
+  confirmPolicy: publicProcedure.input(envelopeInput.extend({ repositoryId: z.number().int().positive(), policyRevision: z.number().int().positive(), policyDigest: z.string().regex(/^[a-f0-9]{64}$/) }).strict()).mutation(async ({ input }) => {
+    const { repositoryId, policyRevision, policyDigest, ...envelope } = input;
+    const confirmation = { repositoryId, policyRevision, policyDigest };
+    const device = await authenticateCompanion("/companion/confirm-policy", envelope, confirmation);
+    if (!device) throw new TRPCError({ code: "UNAUTHORIZED", message: "Companion authentication or request signature failed." });
+    const policyData = await getCompanionPolicy(device.userId, repositoryId);
+    if (!policyData || policyData.policy.revision !== policyRevision) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Policy revision changed before local confirmation." });
+    const expectedDigest = policySnapshotPayload(policyData.policy, policyData.repository, policyData.approvalRule).policyDigest;
+    if (expectedDigest !== policyDigest) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Policy digest changed before local confirmation." });
+    const acknowledged = await acknowledgeCompanionPolicySnapshot({ companionDeviceId: device.id, repositoryId, policyRevision, policyDigest });
+    if (!acknowledged) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "No valid unacknowledged policy receipt is available to confirm." });
+    return { acknowledgedAt: acknowledged.acknowledgedAt, policyRevision };
   }),
   submitCandidate: publicProcedure.input(envelopeInput.extend({ candidate: candidateInput }).strict()).mutation(async ({ input }) => {
     const { candidate, ...envelope } = input;

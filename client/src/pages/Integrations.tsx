@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
-import { Check, Copy, Github, KeyRound, Laptop, LockKeyhole, Plus, RefreshCw, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { deriveOAuthFeedback } from "@shared/setupFlow";
+import { Check, CircleAlert, CircleCheck, Copy, Github, KeyRound, Laptop, LockKeyhole, Plus, RefreshCw, ShieldCheck } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 function formatTime(value?: Date | string | null) {
@@ -18,9 +19,11 @@ export default function Integrations() {
   const connection = trpc.github.connection.useQuery(undefined, { enabled: isAuthenticated });
   const repositoryCatalog = trpc.github.repositories.useQuery(undefined, { enabled: isAuthenticated && Boolean(connection.data) });
   const utils = trpc.useUtils();
+  const [oauthNotice, setOauthNotice] = useState<"authorizing" | "connected" | "cancelled" | "rejected" | "expired" | "error" | null>(null);
   const beginAuthorization = trpc.github.beginAuthorization.useMutation({
+    onMutate: () => { sessionStorage.setItem("autopilot-github-authorizing", "1"); setOauthNotice("authorizing"); },
     onSuccess: result => window.location.assign(result.authorizationUrl),
-    onError: error => toast.error("GitHub connection could not start", { description: error.message }),
+    onError: error => { setOauthNotice("error"); toast.error("GitHub connection could not start", { description: error.message }); },
   });
   const createPairing = trpc.companion.createPairing.useMutation();
   const refreshRepositories = trpc.github.refreshRepositories.useMutation({
@@ -35,6 +38,15 @@ export default function Integrations() {
   const [label, setLabel] = useState("My local companion");
   const [pairing, setPairing] = useState<{ pairingCode: string; expiresAt: Date } | null>(null);
   const callbackUrl = `${window.location.origin}/api/github/callback`;
+
+  useEffect(() => {
+    const result = new URLSearchParams(window.location.search).get("github");
+    if (result && ["connected", "cancelled", "rejected", "expired", "error"].includes(result)) {
+      setOauthNotice(result as "connected" | "cancelled" | "rejected" | "expired" | "error");
+      sessionStorage.removeItem("autopilot-github-authorizing");
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (sessionStorage.getItem("autopilot-github-authorizing")) setOauthNotice("authorizing");
+  }, []);
 
   const startPairing = () => {
     createPairing.mutate({ label }, {
@@ -60,6 +72,8 @@ export default function Integrations() {
   return <div className="mx-auto max-w-[1180px] space-y-5">
     <header className="flex flex-col gap-5 border-b border-white/[0.08] pb-6 sm:flex-row sm:items-end sm:justify-between"><div><p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#82949a]">Integrations / Local trust boundary</p><h1 className="mt-2 text-2xl font-extrabold tracking-[-0.055em] text-white sm:text-[30px]">Connections with clear limits.</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-[#9faeaf]">GitHub visibility is read-only and repository-scoped. Your companion is paired to a device, not a browser session, and still executes Git locally.</p></div><Badge variant="outline" className="w-fit gap-1.5 rounded-full border-[#b7f05a]/25 bg-[#b7f05a]/[0.07] px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-[#c9f784]"><LockKeyhole className="h-3 w-3" />No source upload</Badge></header>
 
+    <OAuthFeedback notice={oauthNotice} connectionStatus={connection.data?.status} onRetry={() => beginAuthorization.mutate()} loading={beginAuthorization.isPending} />
+
     <section className="grid gap-5 lg:grid-cols-[1.12fr_0.88fr]"><div className="rounded-[24px] border border-white/[0.09] bg-[#101820]/80 p-6"><div className="flex items-start justify-between gap-4"><div className="grid h-11 w-11 place-items-center rounded-xl bg-[#d5b7ff]/10 text-[#d5b7ff]"><Github className="h-5 w-5" /></div><Badge variant="outline" className={`rounded-full border px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.12em] ${connection.data?.status === "connected" ? "border-[#b7f05a]/30 bg-[#b7f05a]/10 text-[#c9f784]" : "border-white/[0.12] text-[#92a4a4]"}`}>{connection.data?.status === "connected" ? "Connected" : "Not connected"}</Badge></div><h2 className="mt-5 text-xl font-bold tracking-[-0.05em] text-white">GitHub App visibility</h2><p className="mt-2 max-w-xl text-sm leading-6 text-[#9baeb0]">Autopilot requests selected-repository visibility only: <strong className="font-semibold text-[#dce8e2]">Metadata: read</strong> and <strong className="font-semibold text-[#dce8e2]">Administration: read</strong> to inspect branch protection. It cannot read repository contents, write code, change protection, create webhooks, or manage organization settings.</p><div className="mt-4 rounded-xl border border-white/[0.08] bg-[#0b1116]/60 p-3"><p className="font-mono text-[9px] uppercase tracking-[0.13em] text-[#778b90]">GitHub App callback URL</p><code className="mt-2 block break-all text-[11px] text-[#d7e7e0]">{callbackUrl}</code><p className="mt-2 text-[11px] leading-5 text-[#82969a]">Paste this exact URL into the GitHub App’s callback field before connecting. If you publish Studio on a different domain, update the GitHub App callback to that domain first.</p></div>{connection.data ? <div className="mt-5 rounded-xl border border-[#b7f05a]/15 bg-[#b7f05a]/[0.05] p-4"><div className="flex items-center gap-3"><Check className="h-4 w-4 text-[#bdf26a]" /><div><p className="text-sm font-semibold text-white">Connected as @{connection.data.login}</p><p className="mt-1 text-xs text-[#95a9a8]">Token status: {connection.data.status}. Stored encrypted server-side.</p></div></div></div> : <Button onClick={() => beginAuthorization.mutate()} disabled={beginAuthorization.isPending || !isAuthenticated} className="mt-5 rounded-xl bg-[#b7f05a] text-xs font-bold text-[#121a0c] hover:bg-[#c8f87a]">{beginAuthorization.isPending ? <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Github className="mr-1.5 h-3.5 w-3.5" />}Connect selected GitHub repositories</Button>}</div>
       <aside className="rounded-[24px] border border-white/[0.09] bg-[#101820]/75 p-6"><p className="font-mono text-[10px] uppercase tracking-[0.15em] text-[#778b90]">Permission receipt</p><h2 className="mt-2 text-lg font-bold tracking-[-0.045em] text-white">What Studio may observe</h2><div className="mt-5 space-y-3"><Permission label="Repository metadata" description="Names, identifiers, and default branch" /><Permission label="Administration metadata" description="Branch-protection posture only" /><Permission label="Explicitly excluded" description="Contents, writes, hooks, organization access" muted /></div></aside></section>
 
@@ -72,3 +86,12 @@ export default function Integrations() {
 }
 
 function Permission({ label, description, muted = false }: { label: string; description: string; muted?: boolean }) { return <div className={`rounded-xl border p-3 ${muted ? "border-[#ffbc7d]/15 bg-[#ffbc7d]/[0.04]" : "border-white/[0.08] bg-white/[0.025]"}`}><div className="flex items-center gap-2"><ShieldCheck className={`h-3.5 w-3.5 ${muted ? "text-[#ffc17e]" : "text-[#bdf26a]"}`} /><p className="text-xs font-semibold text-white">{label}</p></div><p className="mt-1.5 pl-5 text-[11px] leading-5 text-[#8d9fa1]">{description}</p></div>; }
+
+export function OAuthFeedback({ notice, connectionStatus, onRetry, loading }: { notice: "authorizing" | "connected" | "cancelled" | "rejected" | "expired" | "error" | null; connectionStatus?: string; onRetry: () => void; loading: boolean }) {
+  const state = deriveOAuthFeedback(notice, connectionStatus);
+  if (!state) return null;
+  const content = state === "authorizing" ? { icon: RefreshCw, title: "Waiting for GitHub authorization", body: "Complete the secure GitHub App screen in the tab that opened. Studio will return here when the callback is verified.", className: "border-[#8cc5ff]/25 bg-[#8cc5ff]/[0.06] text-[#b3d9ff]" } : state === "connected" ? { icon: CircleCheck, title: "GitHub authorization confirmed", body: "Your encrypted token is stored server-side. Select repository visibility next.", className: "border-[#b7f05a]/25 bg-[#b7f05a]/[0.06] text-[#c9f784]" } : state === "rejected" ? { icon: CircleAlert, title: "GitHub authorization was rejected", body: "GitHub did not grant the requested App authorization. No token was stored and no repository visibility changed.", className: "border-[#ff8e9b]/25 bg-[#ff8e9b]/[0.06] text-[#ffc0c8]" } : state === "cancelled" ? { icon: CircleAlert, title: "GitHub authorization was cancelled", body: "No token was stored and no repository visibility changed. You can safely try again.", className: "border-[#ffbc7d]/25 bg-[#ffbc7d]/[0.06] text-[#ffd1a8]" } : state === "expired" ? { icon: CircleAlert, title: "GitHub authorization expired", body: "The one-time authorization state is no longer valid. Start a new connection attempt.", className: "border-[#ffbc7d]/25 bg-[#ffbc7d]/[0.06] text-[#ffd1a8]" } : { icon: CircleAlert, title: "GitHub needs attention", body: "Authorization did not complete safely, or the saved connection needs to be refreshed. No source data was transferred.", className: "border-[#ff8e9b]/25 bg-[#ff8e9b]/[0.06] text-[#ffc0c8]" };
+  const Icon = content.icon;
+  const retry = state === "cancelled" || state === "rejected" || state === "expired" || state === "error";
+  return <div className={`flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between ${content.className}`}><div className="flex items-start gap-3"><Icon className={`mt-0.5 h-4 w-4 shrink-0 ${state === "authorizing" ? "animate-spin" : ""}`} /><div><p className="text-sm font-semibold text-white">{content.title}</p><p className="mt-1 text-xs leading-5 text-[#b6c5c4]">{content.body}</p></div></div>{retry && <Button onClick={onRetry} disabled={loading} variant="outline" className="h-8 rounded-xl border-white/[0.15] bg-white/[0.05] text-xs text-white hover:bg-white/[0.1]">{loading ? <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Github className="mr-1.5 h-3.5 w-3.5" />}Retry connection</Button>}</div>;
+}

@@ -166,8 +166,23 @@ export const companionDevices = mysqlTable("companionDevices", {
   publicKey: text("publicKey").notNull(),
   status: mysqlEnum("status", companionDeviceStatuses).notNull().default("active"),
   lastSeenAt: timestamp("lastSeenAt"),
+  lastPolicyRevision: int("lastPolicyRevision"),
+  lastPolicySyncedAt: timestamp("lastPolicySyncedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   revokedAt: timestamp("revokedAt"),
+});
+
+/** Signed snapshot metadata for one companion and repository; no policy payload or source content is retained. */
+export const companionPolicySnapshots = mysqlTable("companionPolicySnapshots", {
+  id: int("id").autoincrement().primaryKey(),
+  companionDeviceId: int("companionDeviceId").notNull(),
+  repositoryId: int("repositoryId").notNull(),
+  policyRevision: int("policyRevision").notNull(),
+  policyDigest: varchar("policyDigest", { length: 128 }).notNull(),
+  issuedAt: timestamp("issuedAt").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  confirmedAt: timestamp("confirmedAt").defaultNow().notNull(),
+  acknowledgedAt: timestamp("acknowledgedAt"),
 });
 
 /** A connection stores an encrypted GitHub App user token plus selected-installation metadata. */
@@ -272,6 +287,7 @@ export type QueuedAction = typeof queuedActions.$inferSelect;
 export type NotificationPreference = typeof notificationPreferences.$inferSelect;
 export type CompanionPairing = typeof companionPairings.$inferSelect;
 export type CompanionDevice = typeof companionDevices.$inferSelect;
+export type CompanionPolicySnapshot = typeof companionPolicySnapshots.$inferSelect;
 export type GitHubConnection = typeof githubConnections.$inferSelect;
 export type GitHubOAuthState = typeof githubOAuthStates.$inferSelect;
 export type GitHubRepositorySelection = typeof githubRepositorySelections.$inferSelect;

@@ -29,6 +29,8 @@ import {
   LayoutDashboard,
   LogOut,
   PanelLeft,
+  Radar,
+  Sparkles,
   ShieldCheck,
   UsersRound,
 } from "lucide-react";
@@ -41,8 +43,10 @@ const navigation = [
   { icon: Blocks, label: "Extensions", path: "/extensions" },
   { icon: Activity, label: "Activity ledger", path: "/activity" },
   { icon: BellRing, label: "Alerts", path: "/alerts" },
+  { icon: Radar, label: "Monitoring", path: "/monitoring" },
   { icon: Github, label: "Integrations", path: "/integrations" },
   { icon: UsersRound, label: "Team approvals", path: "/team" },
+  { icon: Sparkles, label: "Guided setup", path: "/setup" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

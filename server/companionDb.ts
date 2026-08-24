@@ -1,8 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import {
   approvalDecisions,
   automationPolicies,
   companionDevices,
+  companionPolicySnapshots,
   companionPairings,
   companionRequestNonces,
   githubConnections,
@@ -50,6 +51,30 @@ export async function touchCompanionDevice(deviceId: number) {
   if (!db) return false;
   await db.update(companionDevices).set({ lastSeenAt: new Date() }).where(eq(companionDevices.id, deviceId));
   return true;
+}
+
+export async function recordCompanionPolicySnapshot(input: { companionDeviceId: number; repositoryId: number; policyRevision: number; policyDigest: string; issuedAt: Date; expiresAt: Date }) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.insert(companionPolicySnapshots).values({ ...input, confirmedAt: new Date(), acknowledgedAt: null });
+  return true;
+}
+
+export async function acknowledgeCompanionPolicySnapshot(input: { companionDeviceId: number; repositoryId: number; policyRevision: number; policyDigest: string }) {
+  const db = await getDb();
+  if (!db) return null;
+  const snapshot = (await db.select().from(companionPolicySnapshots).where(and(
+    eq(companionPolicySnapshots.companionDeviceId, input.companionDeviceId),
+    eq(companionPolicySnapshots.repositoryId, input.repositoryId),
+    eq(companionPolicySnapshots.policyRevision, input.policyRevision),
+    eq(companionPolicySnapshots.policyDigest, input.policyDigest),
+    isNull(companionPolicySnapshots.acknowledgedAt),
+  )).orderBy(desc(companionPolicySnapshots.confirmedAt)).limit(1))[0];
+  if (!snapshot || snapshot.expiresAt.getTime() <= Date.now()) return null;
+  const acknowledgedAt = new Date();
+  await db.update(companionPolicySnapshots).set({ acknowledgedAt }).where(eq(companionPolicySnapshots.id, snapshot.id));
+  await db.update(companionDevices).set({ lastPolicyRevision: input.policyRevision, lastPolicySyncedAt: acknowledgedAt }).where(eq(companionDevices.id, input.companionDeviceId));
+  return { ...snapshot, acknowledgedAt };
 }
 
 export async function rememberCompanionNonce(input: { deviceId: number; nonceHash: string; expiresAt: Date }) {

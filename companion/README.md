@@ -1,6 +1,6 @@
 # Autopilot Companion Reference CLI
 
-This reference CLI establishes the local protocol boundary. It can pair a device, verify a device-bound policy receipt, submit a metadata-only candidate action, and record an execution receipt. It intentionally does **not** watch files or execute Git commands; a production executor must add those local steps only after successful policy verification and an approved, unexpired decision.
+This reference CLI establishes the local protocol boundary. It can pair a device, verify a device-bound policy receipt, **confirm that verification back to Studio**, submit a metadata-only candidate action, and record an execution receipt. It intentionally does **not** watch files or execute Git commands; a production executor must add those local steps only after successful policy verification and an approved, unexpired decision.
 
 ```bash
 node companion/autopilot-companion.mjs pair https://YOUR-STUDIO-URL YOUR_ONE_TIME_PAIRING_CODE "Laptop"

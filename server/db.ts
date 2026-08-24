@@ -1,9 +1,10 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   activityLogs,
   automationPolicies,
   companionDevices,
+  companionPolicySnapshots,
   extensionPreferences,
   githubConnections,
   InsertUser,
@@ -14,6 +15,7 @@ import {
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { deriveMonitoringSnapshot } from "./monitoring";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -96,6 +98,16 @@ export async function getStudioSnapshot(userId: number) {
     devices: deviceRows.map(({ tokenHash, publicKey, ...device }) => device),
     githubConnection: githubRows[0] ? (() => { const { tokenCiphertext, ...connection } = githubRows[0]; return connection; })() : null,
   };
+}
+
+export async function getMonitoringSnapshot(userId: number) {
+  const snapshot = await getStudioSnapshot(userId);
+  const db = await getDb();
+  const deviceIds = snapshot.devices.map(device => device.id);
+  const policySnapshots = db && deviceIds.length
+    ? await db.select().from(companionPolicySnapshots).where(inArray(companionPolicySnapshots.companionDeviceId, deviceIds)).orderBy(desc(companionPolicySnapshots.confirmedAt)).limit(500)
+    : [];
+  return deriveMonitoringSnapshot({ repositories: snapshot.repositories, policies: snapshot.policies, queuedActions: snapshot.queuedActions, policySnapshots, devices: snapshot.devices });
 }
 
 export async function getRepositoryForUser(userId: number, repositoryId: number) {

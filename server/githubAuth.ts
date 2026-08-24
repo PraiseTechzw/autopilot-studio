@@ -64,12 +64,12 @@ export async function handleGitHubCallback(request: Request, response: Response)
   const code = typeof request.query.code === "string" ? request.query.code : undefined;
   const state = typeof request.query.state === "string" ? request.query.state : undefined;
   if (error || !code || !state) {
-    response.status(400).send("GitHub authorization was cancelled or did not return a code.");
+    response.redirect(`/integrations?github=${error === "access_denied" ? "rejected" : error ? "cancelled" : "error"}`);
     return;
   }
   const oauthState = await consumeGitHubOAuthState(createHash("sha256").update(state).digest("hex"));
   if (!oauthState) {
-    response.status(400).send("This GitHub authorization request is expired or has already been used.");
+    response.redirect("/integrations?github=expired");
     return;
   }
   try {
@@ -97,9 +97,10 @@ export async function handleGitHubCallback(request: Request, response: Response)
     });
     if (!saved) throw new Error("GitHub connection could not be saved.");
     await syncGitHubRepositoryCatalog(oauthState.userId);
-    response.redirect("/?github=connected");
+    response.redirect("/integrations?github=connected");
   } catch (callbackError) {
-    response.status(502).send(`GitHub authorization could not be completed: ${callbackError instanceof Error ? callbackError.message : "unknown error"}`);
+    const reason = encodeURIComponent(callbackError instanceof Error ? callbackError.message.slice(0, 120) : "authorization_failed");
+    response.redirect(`/integrations?github=error&reason=${reason}`);
   }
 }
 

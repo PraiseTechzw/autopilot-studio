@@ -5,7 +5,9 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Home from "@/pages/Home";
 import Integrations from "@/pages/Integrations";
+import Monitoring from "@/pages/Monitoring";
 import NotFound from "@/pages/NotFound";
+import SetupWizard from "@/pages/SetupWizard";
 import TeamApprovals from "@/pages/TeamApprovals";
 import { Route, Switch } from "wouter";
 
@@ -21,6 +23,14 @@ function TeamApprovalsRoute() {
   return <DashboardLayout><TeamApprovals /></DashboardLayout>;
 }
 
+function MonitoringRoute() {
+  return <DashboardLayout><Monitoring /></DashboardLayout>;
+}
+
+function SetupRoute() {
+  return <DashboardLayout><SetupWizard /></DashboardLayout>;
+}
+
 function Router() {
   return <Switch>
     <Route path="/" component={StudioRoute} />
@@ -31,6 +41,8 @@ function Router() {
     <Route path="/alerts" component={StudioRoute} />
     <Route path="/integrations" component={IntegrationsRoute} />
     <Route path="/team" component={TeamApprovalsRoute} />
+    <Route path="/monitoring" component={MonitoringRoute} />
+    <Route path="/setup" component={SetupRoute} />
     <Route path="/404" component={NotFound} />
     <Route component={NotFound} />
   </Switch>;

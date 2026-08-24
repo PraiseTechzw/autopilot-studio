@@ -41,3 +41,22 @@
 - [x] Add helper-level role-boundary tests showing only owner and administrator are recognized as workspace managers.
 - [x] Visually verify the expanded integration and team-workflow surfaces on desktop and mobile.
 - [x] Save a checkpoint for the completed companion, GitHub, and team workflow extension.
+- [x] Define the approval and signed-policy snapshot monitoring metrics, setup milestones, and OAuth progress states.
+- [x] Persist each companion device’s last verified policy revision and snapshot-sync timestamp for repository monitoring.
+- [x] Persist repository-scoped signed policy receipt metadata so monitoring can distinguish multiple policy snapshots from one companion device.
+- [x] Implement typed monitoring data for pending approvals, approved or rejected actions, policy revisions, device sync recency, and snapshot validity.
+- [x] Add a signed companion policy-confirmation route that records local verification only after the companion validates a policy receipt.
+- [x] Distinguish issued policy receipts from confirmed snapshots and base monitoring freshness on confirmed acknowledgments per repository and device.
+- [x] Extend monitoring with explicit per-device sync recency and cover confirmed, stale, and unconfirmed snapshot paths in tests.
+- [x] Add an explicit unconfirmed state for issued policy receipts that the local companion has not yet acknowledged.
+- [x] Extend monitoring tests for current, stale, and unconfirmed snapshot paths, and render the explicit state consistently in the user interface.
+- [x] Wire the monitoring dashboard to the typed monitoring payload and render current, stale, unconfirmed, unseen, and missing-policy states for repositories and devices.
+- [x] Add focused UI-state validation for the monitoring view’s snapshot status labels and setup milestone feedback.
+- [x] Build a monitoring dashboard that makes queued approval status and synced policy snapshots observable without exposing source content.
+- [x] Build an interactive setup wizard for GitHub App configuration, repository selection, companion pairing, and a safe first policy sync.
+- [x] Add clear pending, connected, rejected, expired, and error feedback states to the GitHub OAuth connection experience.
+- [x] Add focused Vitest coverage for monitoring calculations, setup milestones, and OAuth feedback-state derivation.
+- [x] Add rendered UI validation for monitoring snapshot badges and setup milestone completion states.
+- [x] Add an explicit rejected GitHub OAuth feedback state and test the complete OAuth feedback-state matrix.
+- [x] Visually verify the monitoring, wizard, and OAuth feedback experience on desktop and mobile.
+- [ ] Save a checkpoint for the completed monitoring and setup workflow extension.

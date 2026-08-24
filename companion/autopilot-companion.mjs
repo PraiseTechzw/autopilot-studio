@@ -43,7 +43,9 @@ if (command === "pair") {
   const body = { repositoryId };
   const result = await request(config.server, "/api/companion/policy", { ...envelope(config, "/companion/policy", body), ...body });
   if (result.signatureAlgorithm !== "HMAC-SHA256/device-bound" || result.signature !== policyMac(config.deviceToken, result.policyDigest)) throw new Error("Policy receipt verification failed; do not execute or queue an action.");
-  console.log(JSON.stringify(result, null, 2));
+  const confirmation = { repositoryId, policyRevision: result.snapshot.revision, policyDigest: result.policyDigest };
+  const confirmationResult = await request(config.server, "/api/companion/policy-confirmations", { ...envelope(config, "/companion/confirm-policy", confirmation), ...confirmation });
+  console.log(JSON.stringify({ ...result, confirmation: confirmationResult }, null, 2));
 } else if (command === "queue") {
   const [repositoryIdValue, kind, branch, changedFilesValue, riskLevel, ...summaryParts] = args;
   const repositoryId = Number(repositoryIdValue); const changedFiles = Number(changedFilesValue); const summary = summaryParts.join(" ");
@@ -52,6 +54,8 @@ if (command === "pair") {
   const policyBody = { repositoryId };
   const policy = await request(config.server, "/api/companion/policy", { ...envelope(config, "/companion/policy", policyBody), ...policyBody });
   if (policy.signature !== policyMac(config.deviceToken, policy.policyDigest)) throw new Error("Policy receipt verification failed; do not queue an action.");
+  const confirmation = { repositoryId, policyRevision: policy.snapshot.revision, policyDigest: policy.policyDigest };
+  await request(config.server, "/api/companion/policy-confirmations", { ...envelope(config, "/companion/confirm-policy", confirmation), ...confirmation });
   const candidate = { repositoryId, kind, branch, changedFiles, riskLevel, summary, policyRevision: policy.snapshot.revision, policyDigest: policy.policyDigest };
   const result = await request(config.server, "/api/companion/actions", { ...envelope(config, "/companion/submit-candidate", candidate), candidate });
   console.log(JSON.stringify(result, null, 2));

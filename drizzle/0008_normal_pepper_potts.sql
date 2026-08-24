@@ -1,0 +1,1 @@
+ALTER TABLE `companionPolicySnapshots` ADD `acknowledgedAt` timestamp;
