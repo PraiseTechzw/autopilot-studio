@@ -94,3 +94,12 @@
 - [x] Complete GitHub-facing release documentation, including public provenance, release verification, and repository contributor guidance.
 - [x] Retrigger the companion-v1.0.0 public signed release and verify GitHub Release assets, Sigstore bundles, and provenance. (Deferred after repeated runner-allocation failures at the user’s request; no release assets were created.)
 - [x] Preserve the public release workflow, tag, documentation, and diagnostic record while deferring the external GitHub Actions runner blocker.
+- [x] Assess Vercel connection availability, GitHub repository state, and production runtime requirements.
+- [x] Add Vercel configuration and deployment documentation for the full-stack Studio application.
+- [x] Validate the Vercel production build and document all required runtime environment variables without exposing values.
+- [x] Request explicit confirmation before creating the external Vercel project and production deployment.
+- [ ] Verify the Vercel deployment outcome and save a checkpoint for the deployment preparation work.
+- [x] Adapt the full-stack Express and Vite application to a Vercel serverless handler with explicit static output and routing configuration.
+- [ ] Deploy the Vercel serverless adaptation through the linked GitHub project and verify the production alias serves Studio HTML rather than a server bundle.
+- [ ] Verify production Vercel routes and authenticated behavior for `/`, `/download`, `/api/trpc`, `/api/oauth/callback`, and `/api/github/callback` after deployment.
+- [ ] Verify Vercel production routing, runtime environment requirements, and authenticated application behavior after the serverless adaptation.
