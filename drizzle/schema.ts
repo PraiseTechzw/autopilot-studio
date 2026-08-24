@@ -34,6 +34,11 @@ export const recoveryStatuses = ["available", "requested", "completed", "failed"
 export const queuedActionKinds = ["commit", "push"] as const;
 export const queuedActionRisks = ["low", "medium", "high"] as const;
 export const queuedActionStatuses = ["pending", "approved", "rejected"] as const;
+export const companionDeviceStatuses = ["active", "revoked"] as const;
+export const githubConnectionStatuses = ["connected", "expired", "revoked", "attention"] as const;
+export const githubBranchProtectionStatuses = ["protected", "unprotected", "unavailable"] as const;
+export const workspaceRoles = ["owner", "admin", "reviewer", "member"] as const;
+export const approvalDecisionValues = ["approved", "rejected"] as const;
 
 /** A repository record is metadata only; Autopilot Studio never stores source files. */
 export const repositories = mysqlTable("repositories", {
@@ -59,6 +64,7 @@ export const automationPolicies = mysqlTable("automationPolicies", {
   pushApprovalMode: mysqlEnum("pushApprovalMode", pushApprovalModes).notNull().default("review"),
   ignoreRules: text("ignoreRules").notNull(),
   secretRiskMode: mysqlEnum("secretRiskMode", secretRiskModes).notNull().default("block"),
+  revision: int("revision").notNull().default(1),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -110,6 +116,8 @@ export const recoveryActions = mysqlTable("recoveryActions", {
 export const queuedActions = mysqlTable("queuedActions", {
   id: int("id").autoincrement().primaryKey(),
   userId: int("userId").notNull(),
+  actorUserId: int("actorUserId"),
+  companionDeviceId: int("companionDeviceId"),
   repositoryId: int("repositoryId").notNull(),
   kind: mysqlEnum("kind", queuedActionKinds).notNull(),
   branch: varchar("branch", { length: 120 }).notNull(),
@@ -118,6 +126,10 @@ export const queuedActions = mysqlTable("queuedActions", {
   riskLevel: mysqlEnum("riskLevel", queuedActionRisks).notNull().default("low"),
   status: mysqlEnum("status", queuedActionStatuses).notNull().default("pending"),
   decisionNote: text("decisionNote"),
+  policyRevision: int("policyRevision").notNull().default(1),
+  payloadDigest: varchar("payloadDigest", { length: 128 }).notNull().default(""),
+  expiresAt: timestamp("expiresAt"),
+  executionReceipt: text("executionReceipt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   reviewedAt: timestamp("reviewedAt"),
 });
@@ -133,6 +145,122 @@ export const notificationPreferences = mysqlTable("notificationPreferences", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+/** One-time pairing records enroll a local companion without exposing a session cookie. */
+export const companionPairings = mysqlTable("companionPairings", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  pairingCodeHash: varchar("pairingCodeHash", { length: 128 }).notNull().unique(),
+  label: varchar("label", { length: 120 }).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/** Device records store only a token hash and companion public key, never local Git credentials. */
+export const companionDevices = mysqlTable("companionDevices", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  deviceId: varchar("deviceId", { length: 96 }).notNull().unique(),
+  label: varchar("label", { length: 120 }).notNull(),
+  tokenHash: varchar("tokenHash", { length: 128 }).notNull().unique(),
+  publicKey: text("publicKey").notNull(),
+  status: mysqlEnum("status", companionDeviceStatuses).notNull().default("active"),
+  lastSeenAt: timestamp("lastSeenAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  revokedAt: timestamp("revokedAt"),
+});
+
+/** A connection stores an encrypted GitHub App user token plus selected-installation metadata. */
+export const githubConnections = mysqlTable("githubConnections", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  githubUserId: varchar("githubUserId", { length: 80 }).notNull(),
+  login: varchar("login", { length: 120 }).notNull(),
+  installationId: varchar("installationId", { length: 80 }),
+  selectedRepositoryIds: text("selectedRepositoryIds").notNull(),
+  grantedPermissions: text("grantedPermissions").notNull(),
+  tokenCiphertext: text("tokenCiphertext").notNull(),
+  tokenExpiresAt: timestamp("tokenExpiresAt"),
+  status: mysqlEnum("status", githubConnectionStatuses).notNull().default("connected"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** OAuth state records prevent callback substitution and are single use. */
+export const githubOAuthStates = mysqlTable("githubOAuthStates", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  stateHash: varchar("stateHash", { length: 128 }).notNull().unique(),
+  codeVerifier: varchar("codeVerifier", { length: 160 }).notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  usedAt: timestamp("usedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/** Selected GitHub repositories are metadata-only records; source content is never stored. */
+export const githubRepositorySelections = mysqlTable("githubRepositorySelections", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  githubRepositoryId: varchar("githubRepositoryId", { length: 80 }).notNull(),
+  fullName: varchar("fullName", { length: 300 }).notNull(),
+  defaultBranch: varchar("defaultBranch", { length: 120 }).notNull(),
+  branchProtectionStatus: mysqlEnum("branchProtectionStatus", githubBranchProtectionStatuses).notNull().default("unavailable"),
+  selected: boolean("selected").notNull().default(false),
+  lastSyncedAt: timestamp("lastSyncedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** Nonces prevent a signed companion request from being replayed within its validity window. */
+export const companionRequestNonces = mysqlTable("companionRequestNonces", {
+  id: int("id").autoincrement().primaryKey(),
+  deviceId: int("deviceId").notNull(),
+  nonceHash: varchar("nonceHash", { length: 128 }).notNull().unique(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+/** A workspace groups repositories and approval participants without granting GitHub access. */
+export const teamWorkspaces = mysqlTable("teamWorkspaces", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerId: int("ownerId").notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const workspaceMemberships = mysqlTable("workspaceMemberships", {
+  id: int("id").autoincrement().primaryKey(),
+  workspaceId: int("workspaceId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", workspaceRoles).notNull().default("member"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** One repository can have one team rule, including quorum and separation-of-duties controls. */
+export const repositoryApprovalRules = mysqlTable("repositoryApprovalRules", {
+  id: int("id").autoincrement().primaryKey(),
+  repositoryId: int("repositoryId").notNull().unique(),
+  workspaceId: int("workspaceId").notNull(),
+  commitRequiresApproval: boolean("commitRequiresApproval").notNull().default(true),
+  pushRequiresApproval: boolean("pushRequiresApproval").notNull().default(true),
+  approvalQuorum: int("approvalQuorum").notNull().default(1),
+  allowSelfApproval: boolean("allowSelfApproval").notNull().default(false),
+  actionExpiryMinutes: int("actionExpiryMinutes").notNull().default(60),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+/** Approval decisions are append-only and separate from the action's final status. */
+export const approvalDecisions = mysqlTable("approvalDecisions", {
+  id: int("id").autoincrement().primaryKey(),
+  queuedActionId: int("queuedActionId").notNull(),
+  reviewerUserId: int("reviewerUserId").notNull(),
+  decision: mysqlEnum("decision", approvalDecisionValues).notNull(),
+  note: text("note"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Repository = typeof repositories.$inferSelect;
@@ -142,3 +270,13 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type RecoveryAction = typeof recoveryActions.$inferSelect;
 export type QueuedAction = typeof queuedActions.$inferSelect;
 export type NotificationPreference = typeof notificationPreferences.$inferSelect;
+export type CompanionPairing = typeof companionPairings.$inferSelect;
+export type CompanionDevice = typeof companionDevices.$inferSelect;
+export type GitHubConnection = typeof githubConnections.$inferSelect;
+export type GitHubOAuthState = typeof githubOAuthStates.$inferSelect;
+export type GitHubRepositorySelection = typeof githubRepositorySelections.$inferSelect;
+export type CompanionRequestNonce = typeof companionRequestNonces.$inferSelect;
+export type TeamWorkspace = typeof teamWorkspaces.$inferSelect;
+export type WorkspaceMembership = typeof workspaceMemberships.$inferSelect;
+export type RepositoryApprovalRule = typeof repositoryApprovalRules.$inferSelect;
+export type ApprovalDecision = typeof approvalDecisions.$inferSelect;

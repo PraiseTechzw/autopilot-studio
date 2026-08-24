@@ -21,3 +21,23 @@
 - [x] Evaluate protected-branch coverage against each repository’s own persisted automation policy.
 - [x] Add deterministic coverage for the per-repository protected-branch posture calculation.
 - [x] Save a final checkpoint after confirming all completed items are marked complete.
+- [x] Document the local companion protocol, authentication model, replay protections, signed policy snapshot format, and queue metadata contract.
+- [x] Add persistent records for registered companion devices, GitHub connections, team workspaces, memberships, repository approval rules, and approval decisions.
+- [x] Add protocol records for consumed request nonces and GitHub authorization state, plus queued-action actor, device, policy revision, and payload digest fields.
+- [x] Add a runnable local reference companion CLI that pairs a device, signs protocol requests, fetches a policy snapshot, submits metadata-only actions, and records receipts.
+- [x] Implement companion registration and authenticated policy-sync, action-queue, and receipt-submission API procedures that never accept source contents or local Git credentials.
+- [x] Implement a least-privilege GitHub OAuth connection flow with explicitly documented repository and branch-protection read scopes.
+- [x] Build GitHub integration, companion device, team role, and repository approval-rule management interfaces.
+- [x] Build approval inbox and multi-reviewer controls for shared repositories, including auditable decisions and policy-aware execution gates.
+- [x] Add Vitest coverage for companion authentication, policy-signature verification, OAuth scope constraints, role permissions, and approval quorum rules.
+- [x] Persist selected GitHub repository IDs, read branch-protection posture for connected selections, and surface that metadata without requesting source-content access.
+- [x] Add a signed companion decision-status endpoint and CLI flow that blocks local execution unless a matching action is approved, unexpired, and policy-current.
+- [x] Add focused Vitest coverage for least-privilege GitHub connection behavior and owner/admin/reviewer/member authorization constraints.
+- [x] Add behavioral tests for owner/admin allowed paths and reviewer/member denial paths across team member and approval-rule management.
+- [x] Add mocked GitHub API tests for repository selection persistence and default-branch protection posture synchronization.
+- [x] Add explicit owner and administrator allowed-path tests for member and approval-rule management.
+- [x] Add explicit reviewer and member denial-path tests for member and approval-rule management.
+- [x] Model reviewer and member workspace roles separately in route-level tests and verify both roles receive FORBIDDEN for member and approval-rule management.
+- [x] Add helper-level role-boundary tests showing only owner and administrator are recognized as workspace managers.
+- [x] Visually verify the expanded integration and team-workflow surfaces on desktop and mobile.
+- [ ] Save a checkpoint for the completed companion, GitHub, and team workflow extension.

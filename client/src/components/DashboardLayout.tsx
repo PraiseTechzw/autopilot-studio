@@ -25,10 +25,12 @@ import {
   CircleUserRound,
   Command,
   GitBranch,
+  Github,
   LayoutDashboard,
   LogOut,
   PanelLeft,
   ShieldCheck,
+  UsersRound,
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -39,6 +41,8 @@ const navigation = [
   { icon: Blocks, label: "Extensions", path: "/extensions" },
   { icon: Activity, label: "Activity ledger", path: "/activity" },
   { icon: BellRing, label: "Alerts", path: "/alerts" },
+  { icon: Github, label: "Integrations", path: "/integrations" },
+  { icon: UsersRound, label: "Team approvals", path: "/team" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

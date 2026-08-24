@@ -18,6 +18,9 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { notifyOwner } from "./_core/notification";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { companionRouter } from "./routers/companion";
+import { githubRouter } from "./routers/github";
+import { teamRouter } from "./routers/team";
 
 const repositoryInput = z.object({
   name: z.string().trim().min(2).max(160),
@@ -62,6 +65,9 @@ export const appRouter = router({
       return { success: true } as const;
     }),
   }),
+  companion: companionRouter,
+  github: githubRouter,
+  team: teamRouter,
   studio: router({
     dashboard: protectedProcedure.query(({ ctx }) => getStudioSnapshot(ctx.user.id)),
     connectRepository: protectedProcedure.input(repositoryInput).mutation(async ({ ctx, input }) => {

@@ -3,7 +3,9 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   activityLogs,
   automationPolicies,
+  companionDevices,
   extensionPreferences,
+  githubConnections,
   InsertUser,
   notificationPreferences,
   queuedActions,
@@ -63,15 +65,17 @@ export async function getUserByOpenId(openId: string) {
 export async function getStudioSnapshot(userId: number) {
   const db = await getDb();
   if (!db) {
-    return { repositories: [], policies: [], extensions: [], activity: [], recovery: [], queuedActions: [], notifications: null };
+    return { repositories: [], policies: [], extensions: [], activity: [], recovery: [], queuedActions: [], notifications: null, devices: [], githubConnection: null };
   }
-  const [repositoryRows, extensionRows, activityRows, recoveryRows, queuedActionRows, notificationRows] = await Promise.all([
+  const [repositoryRows, extensionRows, activityRows, recoveryRows, queuedActionRows, notificationRows, deviceRows, githubRows] = await Promise.all([
     db.select().from(repositories).where(eq(repositories.userId, userId)).orderBy(desc(repositories.updatedAt)),
     db.select().from(extensionPreferences).where(eq(extensionPreferences.userId, userId)).orderBy(desc(extensionPreferences.updatedAt)),
     db.select().from(activityLogs).where(eq(activityLogs.userId, userId)).orderBy(desc(activityLogs.occurredAt)).limit(100),
     db.select().from(recoveryActions).where(eq(recoveryActions.userId, userId)).orderBy(desc(recoveryActions.requestedAt)).limit(50),
     db.select().from(queuedActions).where(eq(queuedActions.userId, userId)).orderBy(desc(queuedActions.createdAt)).limit(100),
     db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, userId)).limit(1),
+    db.select().from(companionDevices).where(eq(companionDevices.userId, userId)).orderBy(desc(companionDevices.createdAt)),
+    db.select().from(githubConnections).where(eq(githubConnections.userId, userId)).limit(1),
   ]);
   const repositoryIds = repositoryRows.map(repository => repository.id);
   const policyRows = repositoryIds.length
@@ -89,6 +93,8 @@ export async function getStudioSnapshot(userId: number) {
     recovery: recoveryRows,
     queuedActions: queuedActionRows,
     notifications: notificationRows[0] ?? null,
+    devices: deviceRows.map(({ tokenHash, publicKey, ...device }) => device),
+    githubConnection: githubRows[0] ? (() => { const { tokenCiphertext, ...connection } = githubRows[0]; return connection; })() : null,
   };
 }
 
@@ -200,16 +206,29 @@ export async function createRecoveryAction(input: {
 
 export async function createQueuedAction(input: {
   userId: number;
+  actorUserId?: number;
+  companionDeviceId?: number;
   repositoryId: number;
   kind: "commit" | "push";
   branch: string;
   summary: string;
   changedFiles: number;
   riskLevel: "low" | "medium" | "high";
+  policyRevision?: number;
+  payloadDigest?: string;
+  expiresAt?: Date;
 }) {
   const db = await getDb();
   if (!db) return null;
-  const result = await db.insert(queuedActions).values({ ...input, status: "pending" });
+  const result = await db.insert(queuedActions).values({
+    ...input,
+    actorUserId: input.actorUserId ?? input.userId,
+    companionDeviceId: input.companionDeviceId ?? null,
+    policyRevision: input.policyRevision ?? 1,
+    payloadDigest: input.payloadDigest ?? "",
+    expiresAt: input.expiresAt ?? null,
+    status: "pending",
+  });
   return Number(result[0].insertId);
 }
 
