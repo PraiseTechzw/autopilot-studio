@@ -72,4 +72,4 @@
 - [x] Add safe local configuration commands for inspecting the companion config path and updating non-secret execution defaults.
 - [x] Add deterministic tests for commit and push Git command construction and watcher pause behavior on unsafe local repository states.
 - [x] Refactor the watch scheduling flow into testable local helpers and verify that an unsafe-state error pauses future execution attempts.
-- [ ] Save a checkpoint for the completed executable companion CLI.
+- [x] Save a checkpoint for the completed executable companion CLI.
