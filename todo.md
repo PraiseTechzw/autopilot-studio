@@ -40,4 +40,4 @@
 - [x] Model reviewer and member workspace roles separately in route-level tests and verify both roles receive FORBIDDEN for member and approval-rule management.
 - [x] Add helper-level role-boundary tests showing only owner and administrator are recognized as workspace managers.
 - [x] Visually verify the expanded integration and team-workflow surfaces on desktop and mobile.
-- [ ] Save a checkpoint for the completed companion, GitHub, and team workflow extension.
+- [x] Save a checkpoint for the completed companion, GitHub, and team workflow extension.
