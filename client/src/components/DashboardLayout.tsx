@@ -24,6 +24,7 @@ import {
   ChevronRight,
   CircleUserRound,
   Command,
+  KeyRound,
   GitBranch,
   Github,
   LayoutDashboard,
@@ -45,6 +46,7 @@ const navigation = [
   { icon: BellRing, label: "Alerts", path: "/alerts" },
   { icon: Radar, label: "Monitoring", path: "/monitoring" },
   { icon: Github, label: "Integrations", path: "/integrations" },
+  { icon: KeyRound, label: "Companion devices", path: "/devices" },
   { icon: UsersRound, label: "Team approvals", path: "/team" },
   { icon: Sparkles, label: "Guided setup", path: "/setup" },
 ];

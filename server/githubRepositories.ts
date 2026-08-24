@@ -15,6 +15,11 @@ async function getConnectionToken(userId: number) {
   return { db, token: decryptGitHubToken(connection.tokenCiphertext) };
 }
 
+export async function getConnectedGitHubToken(userId: number) {
+  const { token } = await getConnectionToken(userId);
+  return token;
+}
+
 async function githubFetch(token: string, pathOrUrl: string) {
   const url = pathOrUrl.startsWith("https://") ? pathOrUrl : `https://api.github.com${pathOrUrl}`;
   return fetch(url, { headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, "User-Agent": "Autopilot-Studio", "X-GitHub-Api-Version": "2026-03-10" } });

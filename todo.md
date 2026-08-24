@@ -84,3 +84,9 @@
 - [x] Save a checkpoint for the completed dashboard, onboarding, and distribution extension.
 - [x] Add a concise release-notes section to the public Companion download page.
 - [x] Add server-side tests for signed status receipt acceptance and rejection safeguards.
+- [x] Assess existing GitHub release metadata and companion device persistence boundaries for authenticated release state and credential lifecycle controls.
+- [x] Implement authenticated release-status retrieval so public download actions activate only for a completed signed release.
+- [x] Implement companion device revocation and credential rotation controls with auditable, safe lifecycle states.
+- [x] Add tests and desktop/mobile validation for release availability and device lifecycle controls.
+- [x] Request explicit confirmation before creating and pushing the companion-v1.0.0 release tag.
+- [ ] Save a checkpoint for the release activation and companion credential-management extension.

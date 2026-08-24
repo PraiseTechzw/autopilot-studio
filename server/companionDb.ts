@@ -3,6 +3,7 @@ import {
   approvalDecisions,
   automationPolicies,
   companionDevices,
+  companionDeviceEvents,
   companionPolicySnapshots,
   companionPairings,
   companionRequestNonces,
@@ -39,6 +40,23 @@ export async function createCompanionDevice(input: { userId: number; deviceId: s
   if (!db) return null;
   const result = await db.insert(companionDevices).values(input);
   return Number(result[0].insertId);
+}
+
+export async function revokeCompanionDevice(input: { userId: number; companionDeviceId: number }) {
+  const db = await getDb();
+  if (!db) return null;
+  const device = (await db.select().from(companionDevices).where(and(eq(companionDevices.id, input.companionDeviceId), eq(companionDevices.userId, input.userId))).limit(1))[0];
+  if (!device || device.status !== "active") return null;
+  const revokedAt = new Date();
+  await db.update(companionDevices).set({ status: "revoked", revokedAt }).where(eq(companionDevices.id, device.id));
+  return { ...device, status: "revoked" as const, revokedAt };
+}
+
+export async function recordCompanionDeviceEvent(input: { userId: number; companionDeviceId: number; type: "revoked" | "rotation_started"; reason: "user_requested" | "lost_or_stolen" | "suspected_compromise" | "credential_rotation"; replacementLabel?: string }) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.insert(companionDeviceEvents).values({ ...input, replacementLabel: input.replacementLabel ?? null });
+  return true;
 }
 
 export async function getActiveCompanionDevice(deviceId: string, tokenHash: string) {

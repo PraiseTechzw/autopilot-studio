@@ -35,6 +35,8 @@ export const queuedActionKinds = ["commit", "push"] as const;
 export const queuedActionRisks = ["low", "medium", "high"] as const;
 export const queuedActionStatuses = ["pending", "approved", "rejected"] as const;
 export const companionDeviceStatuses = ["active", "revoked"] as const;
+export const companionDeviceEventTypes = ["revoked", "rotation_started"] as const;
+export const companionDeviceEventReasons = ["user_requested", "lost_or_stolen", "suspected_compromise", "credential_rotation"] as const;
 export const githubConnectionStatuses = ["connected", "expired", "revoked", "attention"] as const;
 export const githubBranchProtectionStatuses = ["protected", "unprotected", "unavailable"] as const;
 export const workspaceRoles = ["owner", "admin", "reviewer", "member"] as const;
@@ -173,6 +175,17 @@ export const companionDevices = mysqlTable("companionDevices", {
   revokedAt: timestamp("revokedAt"),
 });
 
+/** Append-only device lifecycle ledger. Reasons are controlled values and no secrets or local paths are stored. */
+export const companionDeviceEvents = mysqlTable("companionDeviceEvents", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  companionDeviceId: int("companionDeviceId").notNull(),
+  type: mysqlEnum("type", companionDeviceEventTypes).notNull(),
+  reason: mysqlEnum("reason", companionDeviceEventReasons).notNull(),
+  replacementLabel: varchar("replacementLabel", { length: 120 }),
+  occurredAt: timestamp("occurredAt").defaultNow().notNull(),
+});
+
 /** Signed snapshot metadata for one companion and repository; no policy payload or source content is retained. */
 export const companionPolicySnapshots = mysqlTable("companionPolicySnapshots", {
   id: int("id").autoincrement().primaryKey(),
@@ -306,6 +319,7 @@ export type QueuedAction = typeof queuedActions.$inferSelect;
 export type NotificationPreference = typeof notificationPreferences.$inferSelect;
 export type CompanionPairing = typeof companionPairings.$inferSelect;
 export type CompanionDevice = typeof companionDevices.$inferSelect;
+export type CompanionDeviceEvent = typeof companionDeviceEvents.$inferSelect;
 export type CompanionPolicySnapshot = typeof companionPolicySnapshots.$inferSelect;
 export type CompanionStatusReceipt = typeof companionStatusReceipts.$inferSelect;
 export type GitHubConnection = typeof githubConnections.$inferSelect;

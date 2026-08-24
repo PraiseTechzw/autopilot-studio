@@ -21,6 +21,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { companionRouter } from "./routers/companion";
 import { githubRouter } from "./routers/github";
+import { releaseRouter } from "./routers/release";
 import { teamRouter } from "./routers/team";
 
 const repositoryInput = z.object({
@@ -68,6 +69,7 @@ export const appRouter = router({
   }),
   companion: companionRouter,
   github: githubRouter,
+  release: releaseRouter,
   team: teamRouter,
   studio: router({
     dashboard: protectedProcedure.query(({ ctx }) => getStudioSnapshot(ctx.user.id)),

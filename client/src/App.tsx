@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import DashboardLayout from "@/components/DashboardLayout";
+import CompanionDevices from "@/pages/CompanionDevices";
 import Download from "@/pages/Download";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/contexts/ThemeContext";
@@ -32,6 +33,10 @@ function SetupRoute() {
   return <DashboardLayout><SetupWizard /></DashboardLayout>;
 }
 
+function CompanionDevicesRoute() {
+  return <DashboardLayout><CompanionDevices /></DashboardLayout>;
+}
+
 function Router() {
   return <Switch>
     <Route path="/download" component={Download} />
@@ -45,6 +50,7 @@ function Router() {
     <Route path="/team" component={TeamApprovalsRoute} />
     <Route path="/monitoring" component={MonitoringRoute} />
     <Route path="/setup" component={SetupRoute} />
+    <Route path="/devices" component={CompanionDevicesRoute} />
     <Route path="/404" component={NotFound} />
     <Route component={NotFound} />
   </Switch>;

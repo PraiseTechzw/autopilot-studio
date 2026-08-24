@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   authenticateCompanion: vi.fn(), canonicalJson: vi.fn((value: unknown) => JSON.stringify(value)), sha256: vi.fn(() => "f".repeat(64)), policySnapshotPayload: vi.fn(),
-  acknowledgeCompanionPolicySnapshot: vi.fn(), createCompanionDevice: vi.fn(), createCompanionPairing: vi.fn(), consumeCompanionPairing: vi.fn(), getCompanionActionForDevice: vi.fn(), getCompanionPolicy: vi.fn(), getCurrentAcknowledgedCompanionPolicySnapshot: vi.fn(), recordCompanionPolicySnapshot: vi.fn(), recordCompanionStatusReceipt: vi.fn(), saveExecutionReceipt: vi.fn(),
+  acknowledgeCompanionPolicySnapshot: vi.fn(), createCompanionDevice: vi.fn(), createCompanionPairing: vi.fn(), consumeCompanionPairing: vi.fn(), getCompanionActionForDevice: vi.fn(), getCompanionPolicy: vi.fn(), getCurrentAcknowledgedCompanionPolicySnapshot: vi.fn(), recordCompanionDeviceEvent: vi.fn(), recordCompanionPolicySnapshot: vi.fn(), recordCompanionStatusReceipt: vi.fn(), revokeCompanionDevice: vi.fn(), saveExecutionReceipt: vi.fn(),
   createQueuedAction: vi.fn(), writeActivity: vi.fn(),
 }));
 
@@ -47,5 +47,20 @@ describe("signed companion status route", () => {
     const caller = companionRouter.createCaller({} as any);
     await expect(caller.submitStatus({ ...envelope, status })).resolves.toMatchObject({ receiptId: 91 });
     expect(mocks.recordCompanionStatusReceipt).toHaveBeenCalledWith(expect.objectContaining({ companionDeviceId: 44, repositoryId: 7, branch: "feature/local", safetyReasons: "[]", payloadDigest: "f".repeat(64) }));
+  });
+
+  it("revokes only an owned active device and records the controlled lifecycle reason", async () => {
+    mocks.revokeCompanionDevice.mockResolvedValue({ id: 44, revokedAt: new Date() }); mocks.recordCompanionDeviceEvent.mockResolvedValue(true);
+    const caller = companionRouter.createCaller({ user: { id: 12 } } as any);
+    await expect(caller.revokeDevice({ companionDeviceId: 44, reason: "lost_or_stolen" })).resolves.toMatchObject({ deviceId: 44, status: "revoked" });
+    expect(mocks.revokeCompanionDevice).toHaveBeenCalledWith({ userId: 12, companionDeviceId: 44 });
+    expect(mocks.recordCompanionDeviceEvent).toHaveBeenCalledWith(expect.objectContaining({ type: "revoked", reason: "lost_or_stolen" }));
+  });
+
+  it("revokes the old credential before producing a one-time replacement pairing code", async () => {
+    mocks.revokeCompanionDevice.mockResolvedValue({ id: 44, label: "Laptop", revokedAt: new Date() }); mocks.createCompanionPairing.mockResolvedValue(71); mocks.recordCompanionDeviceEvent.mockResolvedValue(true);
+    const caller = companionRouter.createCaller({ user: { id: 12 } } as any);
+    await expect(caller.rotateDevice({ companionDeviceId: 44, replacementLabel: "Laptop replacement" })).resolves.toMatchObject({ pairingId: 71, replacedDeviceId: 44, pairingCode: expect.any(String) });
+    expect(mocks.recordCompanionDeviceEvent).toHaveBeenCalledWith(expect.objectContaining({ type: "rotation_started", reason: "credential_rotation", replacementLabel: "Laptop replacement" }));
   });
 });

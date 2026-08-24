@@ -4,6 +4,7 @@ import {
   activityLogs,
   automationPolicies,
   companionDevices,
+  companionDeviceEvents,
   companionPolicySnapshots,
   companionStatusReceipts,
   extensionPreferences,
@@ -68,9 +69,9 @@ export async function getUserByOpenId(openId: string) {
 export async function getStudioSnapshot(userId: number) {
   const db = await getDb();
   if (!db) {
-    return { repositories: [], policies: [], extensions: [], activity: [], recovery: [], queuedActions: [], notifications: null, devices: [], statusReceipts: [], githubConnection: null };
+    return { repositories: [], policies: [], extensions: [], activity: [], recovery: [], queuedActions: [], notifications: null, devices: [], deviceEvents: [], statusReceipts: [], githubConnection: null };
   }
-  const [repositoryRows, extensionRows, activityRows, recoveryRows, queuedActionRows, notificationRows, deviceRows, githubRows] = await Promise.all([
+  const [repositoryRows, extensionRows, activityRows, recoveryRows, queuedActionRows, notificationRows, deviceRows, githubRows, deviceEvents] = await Promise.all([
     db.select().from(repositories).where(eq(repositories.userId, userId)).orderBy(desc(repositories.updatedAt)),
     db.select().from(extensionPreferences).where(eq(extensionPreferences.userId, userId)).orderBy(desc(extensionPreferences.updatedAt)),
     db.select().from(activityLogs).where(eq(activityLogs.userId, userId)).orderBy(desc(activityLogs.occurredAt)).limit(100),
@@ -79,6 +80,7 @@ export async function getStudioSnapshot(userId: number) {
     db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, userId)).limit(1),
     db.select().from(companionDevices).where(eq(companionDevices.userId, userId)).orderBy(desc(companionDevices.createdAt)),
     db.select().from(githubConnections).where(eq(githubConnections.userId, userId)).limit(1),
+    db.select().from(companionDeviceEvents).where(eq(companionDeviceEvents.userId, userId)).orderBy(desc(companionDeviceEvents.occurredAt)).limit(100),
   ]);
   const repositoryIds = repositoryRows.map(repository => repository.id);
   const policyRows = repositoryIds.length
@@ -99,6 +101,7 @@ export async function getStudioSnapshot(userId: number) {
     queuedActions: queuedActionRows,
     notifications: notificationRows[0] ?? null,
     devices: deviceRows.map(({ tokenHash, publicKey, ...device }) => device),
+    deviceEvents,
     statusReceipts,
     githubConnection: githubRows[0] ? (() => { const { tokenCiphertext, ...connection } = githubRows[0]; return connection; })() : null,
   };

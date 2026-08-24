@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { acknowledgeCompanionPolicySnapshot, createCompanionDevice, createCompanionPairing, consumeCompanionPairing, getCompanionActionForDevice, getCompanionPolicy, getCurrentAcknowledgedCompanionPolicySnapshot, recordCompanionPolicySnapshot, recordCompanionStatusReceipt, saveExecutionReceipt } from "../companionDb";
+import { acknowledgeCompanionPolicySnapshot, createCompanionDevice, createCompanionPairing, consumeCompanionPairing, getCompanionActionForDevice, getCompanionPolicy, getCurrentAcknowledgedCompanionPolicySnapshot, recordCompanionDeviceEvent, recordCompanionPolicySnapshot, recordCompanionStatusReceipt, revokeCompanionDevice, saveExecutionReceipt } from "../companionDb";
 import { authenticateCompanion, canonicalJson, policySnapshotPayload, sha256, signPolicyDigest } from "../companionProtocol";
 import { createQueuedAction, writeActivity } from "../db";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
@@ -45,6 +45,25 @@ export const companionRouter = router({
     const pairingId = await createCompanionPairing({ userId: ctx.user.id, label: input.label, pairingCodeHash: sha256(pairingCode), expiresAt: new Date(Date.now() + 10 * 60 * 1000) });
     if (!pairingId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Pairing code could not be created." });
     return { pairingId, pairingCode, expiresAt: new Date(Date.now() + 10 * 60 * 1000) };
+  }),
+  revokeDevice: protectedProcedure.input(z.object({ companionDeviceId: z.number().int().positive(), reason: z.enum(["user_requested", "lost_or_stolen", "suspected_compromise"]) }).strict()).mutation(async ({ ctx, input }) => {
+    const device = await revokeCompanionDevice({ userId: ctx.user.id, companionDeviceId: input.companionDeviceId });
+    if (!device) throw new TRPCError({ code: "NOT_FOUND", message: "An active companion device with that identifier was not found." });
+    const recorded = await recordCompanionDeviceEvent({ userId: ctx.user.id, companionDeviceId: device.id, type: "revoked", reason: input.reason });
+    if (!recorded) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The companion device was revoked but its lifecycle record could not be saved." });
+    return { deviceId: device.id, status: "revoked" as const, revokedAt: device.revokedAt };
+  }),
+  rotateDevice: protectedProcedure.input(z.object({ companionDeviceId: z.number().int().positive(), replacementLabel: z.string().trim().min(2).max(120) }).strict()).mutation(async ({ ctx, input }) => {
+    const device = await revokeCompanionDevice({ userId: ctx.user.id, companionDeviceId: input.companionDeviceId });
+    if (!device) throw new TRPCError({ code: "NOT_FOUND", message: "An active companion device with that identifier was not found." });
+    const pairingCode = randomBytes(24).toString("base64url");
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const pairingId = await createCompanionPairing({ userId: ctx.user.id, label: input.replacementLabel, pairingCodeHash: sha256(pairingCode), expiresAt });
+    if (!pairingId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The old credential was revoked, but a replacement pairing code could not be created." });
+    const revoked = await recordCompanionDeviceEvent({ userId: ctx.user.id, companionDeviceId: device.id, type: "revoked", reason: "credential_rotation" });
+    const started = await recordCompanionDeviceEvent({ userId: ctx.user.id, companionDeviceId: device.id, type: "rotation_started", reason: "credential_rotation", replacementLabel: input.replacementLabel });
+    if (!revoked || !started) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The old credential was revoked, but its rotation audit record could not be saved." });
+    return { pairingId, pairingCode, expiresAt, replacedDeviceId: device.id };
   }),
   register: publicProcedure.input(z.object({ pairingCode: z.string().trim().min(32).max(256), deviceId: z.string().trim().min(12).max(96), label: z.string().trim().min(2).max(120), publicKey: z.string().trim().min(80).max(2048) }).strict()).mutation(async ({ input }) => {
     const pairing = await consumeCompanionPairing(sha256(input.pairingCode));
