@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { acknowledgeCompanionPolicySnapshot, createCompanionDevice, createCompanionPairing, consumeCompanionPairing, getCompanionActionForDevice, getCompanionPolicy, recordCompanionPolicySnapshot, saveExecutionReceipt } from "../companionDb";
-import { authenticateCompanion, policySnapshotPayload, sha256, signPolicyDigest } from "../companionProtocol";
+import { acknowledgeCompanionPolicySnapshot, createCompanionDevice, createCompanionPairing, consumeCompanionPairing, getCompanionActionForDevice, getCompanionPolicy, getCurrentAcknowledgedCompanionPolicySnapshot, recordCompanionPolicySnapshot, recordCompanionStatusReceipt, saveExecutionReceipt } from "../companionDb";
+import { authenticateCompanion, canonicalJson, policySnapshotPayload, sha256, signPolicyDigest } from "../companionProtocol";
 import { createQueuedAction, writeActivity } from "../db";
 import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 
@@ -23,6 +23,20 @@ const candidateInput = z.object({
   riskLevel: z.enum(["low", "medium", "high"]),
   policyRevision: z.number().int().positive(),
   policyDigest: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict();
+
+const statusReasonInput = z.enum(["not_a_git_work_tree", "detached_head", "merge_rebase_or_cherry_pick_in_progress", "protected_branch", "no_local_changes", "only_ignored_changes", "local_secret_risk_detected"]);
+const statusInput = z.object({
+  repositoryId: z.number().int().positive(),
+  policyRevision: z.number().int().positive(),
+  policyDigest: z.string().regex(/^[a-f0-9]{64}$/),
+  branch: z.string().trim().min(1).max(120),
+  safetyStatus: z.enum(["safe", "blocked"]),
+  safetyReasons: z.array(statusReasonInput).max(12),
+  changedFiles: z.number().int().min(0).max(100000),
+  eligibleFiles: z.number().int().min(0).max(100000),
+  companionVersion: z.string().trim().regex(/^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$/).max(40),
+  observedAt: z.string().datetime({ offset: true }),
 }).strict();
 
 export const companionRouter = router({
@@ -62,6 +76,21 @@ export const companionRouter = router({
     const acknowledged = await acknowledgeCompanionPolicySnapshot({ companionDeviceId: device.id, repositoryId, policyRevision, policyDigest });
     if (!acknowledged) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "No valid unacknowledged policy receipt is available to confirm." });
     return { acknowledgedAt: acknowledged.acknowledgedAt, policyRevision };
+  }),
+  submitStatus: publicProcedure.input(envelopeInput.extend({ status: statusInput }).strict()).mutation(async ({ input }) => {
+    const { status, ...envelope } = input;
+    const device = await authenticateCompanion("/companion/status", envelope, status);
+    if (!device) throw new TRPCError({ code: "UNAUTHORIZED", message: "Companion authentication or request signature failed." });
+    const policyData = await getCompanionPolicy(device.userId, status.repositoryId);
+    if (!policyData || policyData.policy.revision !== status.policyRevision) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Policy revision changed before this status receipt was received." });
+    const expectedDigest = policySnapshotPayload(policyData.policy, policyData.repository, policyData.approvalRule).policyDigest;
+    if (expectedDigest !== status.policyDigest) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Status receipt does not match the active policy digest." });
+    const acknowledgement = await getCurrentAcknowledgedCompanionPolicySnapshot({ companionDeviceId: device.id, repositoryId: status.repositoryId, policyRevision: status.policyRevision, policyDigest: status.policyDigest });
+    if (!acknowledgement?.acknowledgedAt || acknowledgement.expiresAt.getTime() <= Date.now()) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Confirm the current signed policy snapshot before submitting local status." });
+    if ((status.safetyStatus === "safe" && status.safetyReasons.length) || (status.safetyStatus === "blocked" && !status.safetyReasons.length)) throw new TRPCError({ code: "BAD_REQUEST", message: "Safety status and reason metadata are inconsistent." });
+    const receiptId = await recordCompanionStatusReceipt({ companionDeviceId: device.id, ...status, safetyReasons: JSON.stringify(status.safetyReasons), payloadDigest: sha256(canonicalJson(status)), observedAt: new Date(status.observedAt) });
+    if (!receiptId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Companion status receipt could not be recorded." });
+    return { receiptId, receivedAt: new Date() };
   }),
   submitCandidate: publicProcedure.input(envelopeInput.extend({ candidate: candidateInput }).strict()).mutation(async ({ input }) => {
     const { candidate, ...envelope } = input;

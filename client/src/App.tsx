@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import DashboardLayout from "@/components/DashboardLayout";
+import Download from "@/pages/Download";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Home from "@/pages/Home";
@@ -33,6 +34,7 @@ function SetupRoute() {
 
 function Router() {
   return <Switch>
+    <Route path="/download" component={Download} />
     <Route path="/" component={StudioRoute} />
     <Route path="/repositories" component={StudioRoute} />
     <Route path="/policies" component={StudioRoute} />

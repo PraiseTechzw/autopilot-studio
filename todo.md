@@ -73,3 +73,14 @@
 - [x] Add deterministic tests for commit and push Git command construction and watcher pause behavior on unsafe local repository states.
 - [x] Refactor the watch scheduling flow into testable local helpers and verify that an unsafe-state error pauses future execution attempts.
 - [x] Save a checkpoint for the completed executable companion CLI.
+- [x] Define the signed CLI status receipt schema, dashboard observability signals, executable-companion pairing journey, release artifact model, and signing trust boundary.
+- [x] Persist signed CLI status receipts and expose typed dashboard data for policy revision, branch posture, local safety result, sync freshness, and companion version.
+- [x] Extend the executable CLI to submit signed status receipts after successful local inspection without sending source content or Git credentials.
+- [x] Build dashboard and setup-wizard surfaces that show the latest companion status, policy snapshot freshness, device pairing command, and post-pairing validation.
+- [x] Build a public-facing Companion download page with platform guidance, release notes, checksums, and signature-verification instructions.
+- [x] Add reproducible release packaging, manifest generation, checksum verification, and a signing workflow that does not embed or expose private signing keys.
+- [x] Add Vitest coverage for signed status receipt validation, dashboard status derivation, release manifest integrity, and pairing UI state.
+- [x] Verify the status receipt flow, release packaging, checksum validation, and desktop/mobile download experience.
+- [x] Save a checkpoint for the completed dashboard, onboarding, and distribution extension.
+- [x] Add a concise release-notes section to the public Companion download page.
+- [x] Add server-side tests for signed status receipt acceptance and rejection safeguards.

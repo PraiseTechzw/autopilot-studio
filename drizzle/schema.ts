@@ -39,6 +39,7 @@ export const githubConnectionStatuses = ["connected", "expired", "revoked", "att
 export const githubBranchProtectionStatuses = ["protected", "unprotected", "unavailable"] as const;
 export const workspaceRoles = ["owner", "admin", "reviewer", "member"] as const;
 export const approvalDecisionValues = ["approved", "rejected"] as const;
+export const companionStatusSafetyValues = ["safe", "blocked"] as const;
 
 /** A repository record is metadata only; Autopilot Studio never stores source files. */
 export const repositories = mysqlTable("repositories", {
@@ -185,6 +186,24 @@ export const companionPolicySnapshots = mysqlTable("companionPolicySnapshots", {
   acknowledgedAt: timestamp("acknowledgedAt"),
 });
 
+/** Device-signed local inspection metadata. No file names, diffs, source contents, remotes, or credentials are retained. */
+export const companionStatusReceipts = mysqlTable("companionStatusReceipts", {
+  id: int("id").autoincrement().primaryKey(),
+  companionDeviceId: int("companionDeviceId").notNull(),
+  repositoryId: int("repositoryId").notNull(),
+  policyRevision: int("policyRevision").notNull(),
+  policyDigest: varchar("policyDigest", { length: 128 }).notNull(),
+  branch: varchar("branch", { length: 120 }).notNull(),
+  safetyStatus: mysqlEnum("safetyStatus", companionStatusSafetyValues).notNull(),
+  safetyReasons: text("safetyReasons").notNull(),
+  changedFiles: int("changedFiles").notNull().default(0),
+  eligibleFiles: int("eligibleFiles").notNull().default(0),
+  companionVersion: varchar("companionVersion", { length: 40 }).notNull(),
+  payloadDigest: varchar("payloadDigest", { length: 128 }).notNull(),
+  observedAt: timestamp("observedAt").notNull(),
+  receivedAt: timestamp("receivedAt").defaultNow().notNull(),
+});
+
 /** A connection stores an encrypted GitHub App user token plus selected-installation metadata. */
 export const githubConnections = mysqlTable("githubConnections", {
   id: int("id").autoincrement().primaryKey(),
@@ -288,6 +307,7 @@ export type NotificationPreference = typeof notificationPreferences.$inferSelect
 export type CompanionPairing = typeof companionPairings.$inferSelect;
 export type CompanionDevice = typeof companionDevices.$inferSelect;
 export type CompanionPolicySnapshot = typeof companionPolicySnapshots.$inferSelect;
+export type CompanionStatusReceipt = typeof companionStatusReceipts.$inferSelect;
 export type GitHubConnection = typeof githubConnections.$inferSelect;
 export type GitHubOAuthState = typeof githubOAuthStates.$inferSelect;
 export type GitHubRepositorySelection = typeof githubRepositorySelections.$inferSelect;

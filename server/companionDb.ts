@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import {
   approvalDecisions,
   automationPolicies,
@@ -6,6 +6,7 @@ import {
   companionPolicySnapshots,
   companionPairings,
   companionRequestNonces,
+  companionStatusReceipts,
   githubConnections,
   githubOAuthStates,
   queuedActions,
@@ -75,6 +76,32 @@ export async function acknowledgeCompanionPolicySnapshot(input: { companionDevic
   await db.update(companionPolicySnapshots).set({ acknowledgedAt }).where(eq(companionPolicySnapshots.id, snapshot.id));
   await db.update(companionDevices).set({ lastPolicyRevision: input.policyRevision, lastPolicySyncedAt: acknowledgedAt }).where(eq(companionDevices.id, input.companionDeviceId));
   return { ...snapshot, acknowledgedAt };
+}
+
+export async function getCurrentAcknowledgedCompanionPolicySnapshot(input: { companionDeviceId: number; repositoryId: number; policyRevision: number; policyDigest: string }) {
+  const db = await getDb();
+  if (!db) return null;
+  return (await db.select().from(companionPolicySnapshots).where(and(
+    eq(companionPolicySnapshots.companionDeviceId, input.companionDeviceId),
+    eq(companionPolicySnapshots.repositoryId, input.repositoryId),
+    eq(companionPolicySnapshots.policyRevision, input.policyRevision),
+    eq(companionPolicySnapshots.policyDigest, input.policyDigest),
+  )).orderBy(desc(companionPolicySnapshots.acknowledgedAt)).limit(1))[0] ?? null;
+}
+
+export async function recordCompanionStatusReceipt(input: { companionDeviceId: number; repositoryId: number; policyRevision: number; policyDigest: string; branch: string; safetyStatus: "safe" | "blocked"; safetyReasons: string; changedFiles: number; eligibleFiles: number; companionVersion: string; payloadDigest: string; observedAt: Date }) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.insert(companionStatusReceipts).values(input);
+  return Number(result[0].insertId);
+}
+
+export async function getCompanionStatusReceiptsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const devices = await db.select().from(companionDevices).where(eq(companionDevices.userId, userId));
+  const deviceIds = devices.map(device => device.id);
+  return deviceIds.length ? db.select().from(companionStatusReceipts).where(inArray(companionStatusReceipts.companionDeviceId, deviceIds)).orderBy(desc(companionStatusReceipts.receivedAt)).limit(500) : [];
 }
 
 export async function rememberCompanionNonce(input: { deviceId: number; nonceHash: string; expiresAt: Date }) {

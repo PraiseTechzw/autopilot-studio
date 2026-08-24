@@ -1,0 +1,57 @@
+name: Release Autopilot Companion
+
+on:
+  push:
+    tags:
+      - "companion-v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    name: Package, attest, and sign companion
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Build deterministic source bundles
+        env:
+          COMPANION_VERSION: ${{ github.ref_name }}
+        run: |
+          export COMPANION_VERSION="${COMPANION_VERSION#companion-v}"
+          node scripts/package-companion.mjs
+          node scripts/package-companion.mjs --verify
+
+      - name: Generate GitHub provenance attestations
+        uses: actions/attest@v4
+        with:
+          subject-path: "release/*"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4
+
+      - name: Keylessly sign every release blob
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          for artifact in release/*; do
+            cosign sign-blob --yes --bundle "${artifact}.sigstore.json" "$artifact"
+          done
+
+      - name: Create GitHub release with signatures
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" release/* --title "Autopilot Companion ${{ github.ref_name }}" --generate-notes

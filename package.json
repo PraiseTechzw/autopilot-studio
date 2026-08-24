@@ -14,7 +14,9 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "companion": "node companion/autopilot.mjs"
+    "companion": "node companion/autopilot.mjs",
+    "companion:package": "node scripts/package-companion.mjs",
+    "companion:verify-release": "node scripts/package-companion.mjs --verify"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

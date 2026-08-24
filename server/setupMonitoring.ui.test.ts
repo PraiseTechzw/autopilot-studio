@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { OAuthFeedback } from "../client/src/pages/Integrations";
 import { SnapshotStateBadge } from "../client/src/pages/Monitoring";
 import { SetupMilestoneBadge } from "../client/src/pages/SetupWizard";
+import { ReleaseTrustBadge } from "../client/src/pages/Download";
 
 describe("monitoring and setup UI feedback", () => {
   it.each(["current", "stale", "unconfirmed", "unseen", "missing_policy"] as const)("renders the %s snapshot badge", state => {
@@ -17,5 +18,10 @@ describe("monitoring and setup UI feedback", () => {
 
   it("renders an explicit rejected OAuth feedback state", () => {
     expect(renderToStaticMarkup(createElement(OAuthFeedback, { notice: "rejected", onRetry: () => undefined, loading: false }))).toContain("GitHub authorization was rejected");
+  });
+
+  it("labels unpublished local release artifacts as unsigned rather than implying code signing", () => {
+    expect(renderToStaticMarkup(createElement(ReleaseTrustBadge, { published: false }))).toContain("signed release pending");
+    expect(renderToStaticMarkup(createElement(ReleaseTrustBadge, { published: true }))).toContain("signed release available");
   });
 });

@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("./companionDb", () => mocks);
 
-import { authenticateCompanion, createRequestSigningPayload, policySnapshotPayload } from "./companionProtocol";
+import { authenticateCompanion, canonicalJson, createRequestSigningPayload, policySnapshotPayload } from "./companionProtocol";
 
 describe("companion protocol", () => {
   beforeEach(() => vi.resetAllMocks());
@@ -35,5 +35,11 @@ describe("companion protocol", () => {
     expect(result.policyDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(result.snapshot).toMatchObject({ repositoryId: 9, revision: 2, protectedBranches: ["main"], ignoreRules: [".env"] });
     expect(JSON.stringify(result.snapshot)).not.toContain("contents");
+  });
+
+  it("canonicalizes status-style metadata independently of input field order", () => {
+    const left = { repositoryId: 9, branch: "feature/safe", changedFiles: 2, safetyReasons: ["protected_branch"] };
+    const right = { safetyReasons: ["protected_branch"], changedFiles: 2, branch: "feature/safe", repositoryId: 9 };
+    expect(canonicalJson(left)).toBe(canonicalJson(right));
   });
 });

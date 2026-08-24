@@ -12,7 +12,7 @@ describe("guided setup and OAuth feedback", () => {
   });
 
   it("keeps setup incomplete until each observable safety milestone is met", () => {
-    expect(deriveSetupMilestones({ connected: true, selectedRepositories: 1, pairedDevices: 0, currentSnapshots: 0 })).toEqual({ githubConnected: true, repositoryScopeReady: true, companionPaired: false, policySyncCurrent: false });
-    expect(deriveSetupMilestones({ connected: true, selectedRepositories: 2, pairedDevices: 1, currentSnapshots: 1 }).policySyncCurrent).toBe(true);
+    expect(deriveSetupMilestones({ connected: true, selectedRepositories: 1, pairedDevices: 0, currentSnapshots: 0, freshLocalStatuses: 0 })).toEqual({ githubConnected: true, repositoryScopeReady: true, companionPaired: false, policySyncCurrent: false, localStatusCurrent: false });
+    expect(deriveSetupMilestones({ connected: true, selectedRepositories: 2, pairedDevices: 1, currentSnapshots: 1, freshLocalStatuses: 1 })).toMatchObject({ policySyncCurrent: true, localStatusCurrent: true });
   });
 });

@@ -24,6 +24,10 @@ export function registerCompanionHttpRoutes(app: Express) {
     const caller = appRouter.createCaller({ req: request as any, res: response as any, user: null });
     return invoke(request, response, input => caller.companion.confirmPolicy(input as any));
   });
+  app.post("/api/companion/status", async (request, response) => {
+    const caller = appRouter.createCaller({ req: request as any, res: response as any, user: null });
+    return invoke(request, response, input => caller.companion.submitStatus(input as any), 201);
+  });
   app.post("/api/companion/actions", async (request, response) => {
     const caller = appRouter.createCaller({ req: request as any, res: response as any, user: null });
     return invoke(request, response, input => caller.companion.submitCandidate(input as any), 201);

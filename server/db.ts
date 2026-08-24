@@ -5,6 +5,7 @@ import {
   automationPolicies,
   companionDevices,
   companionPolicySnapshots,
+  companionStatusReceipts,
   extensionPreferences,
   githubConnections,
   InsertUser,
@@ -67,7 +68,7 @@ export async function getUserByOpenId(openId: string) {
 export async function getStudioSnapshot(userId: number) {
   const db = await getDb();
   if (!db) {
-    return { repositories: [], policies: [], extensions: [], activity: [], recovery: [], queuedActions: [], notifications: null, devices: [], githubConnection: null };
+    return { repositories: [], policies: [], extensions: [], activity: [], recovery: [], queuedActions: [], notifications: null, devices: [], statusReceipts: [], githubConnection: null };
   }
   const [repositoryRows, extensionRows, activityRows, recoveryRows, queuedActionRows, notificationRows, deviceRows, githubRows] = await Promise.all([
     db.select().from(repositories).where(eq(repositories.userId, userId)).orderBy(desc(repositories.updatedAt)),
@@ -87,6 +88,8 @@ export async function getStudioSnapshot(userId: number) {
     ? await Promise.all(repositoryIds.map(id => db.select().from(automationPolicies).where(eq(automationPolicies.repositoryId, id)).limit(1)))
     : [policyRows];
 
+  const deviceIds = deviceRows.map(device => device.id);
+  const statusReceipts = deviceIds.length ? await db.select().from(companionStatusReceipts).where(inArray(companionStatusReceipts.companionDeviceId, deviceIds)).orderBy(desc(companionStatusReceipts.receivedAt)).limit(500) : [];
   return {
     repositories: repositoryRows,
     policies: policies.flat(),
@@ -96,6 +99,7 @@ export async function getStudioSnapshot(userId: number) {
     queuedActions: queuedActionRows,
     notifications: notificationRows[0] ?? null,
     devices: deviceRows.map(({ tokenHash, publicKey, ...device }) => device),
+    statusReceipts,
     githubConnection: githubRows[0] ? (() => { const { tokenCiphertext, ...connection } = githubRows[0]; return connection; })() : null,
   };
 }
@@ -107,7 +111,7 @@ export async function getMonitoringSnapshot(userId: number) {
   const policySnapshots = db && deviceIds.length
     ? await db.select().from(companionPolicySnapshots).where(inArray(companionPolicySnapshots.companionDeviceId, deviceIds)).orderBy(desc(companionPolicySnapshots.confirmedAt)).limit(500)
     : [];
-  return deriveMonitoringSnapshot({ repositories: snapshot.repositories, policies: snapshot.policies, queuedActions: snapshot.queuedActions, policySnapshots, devices: snapshot.devices });
+  return deriveMonitoringSnapshot({ repositories: snapshot.repositories, policies: snapshot.policies, queuedActions: snapshot.queuedActions, policySnapshots, statusReceipts: snapshot.statusReceipts, devices: snapshot.devices });
 }
 
 export async function getRepositoryForUser(userId: number, repositoryId: number) {

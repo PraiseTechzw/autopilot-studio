@@ -9,11 +9,11 @@ export type CompanionEnvelope = {
   signature: string;
 };
 
-function stableStringify(value: unknown): string {
+export function canonicalJson(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
   const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right));
-  return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${stableStringify(entry)}`).join(",")}}`;
+  return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`).join(",")}}`;
 }
 
 export function sha256(value: string): string {
@@ -25,7 +25,7 @@ export function signPolicyDigest(deviceToken: string, policyDigest: string): str
 }
 
 export function createRequestSigningPayload(path: string, envelope: Omit<CompanionEnvelope, "token" | "signature">, body: unknown) {
-  return ["AUTOPILOT-COMPANION-V1", path, envelope.deviceId, envelope.nonce, String(envelope.issuedAt), sha256(stableStringify(body))].join("\n");
+  return ["AUTOPILOT-COMPANION-V1", path, envelope.deviceId, envelope.nonce, String(envelope.issuedAt), sha256(canonicalJson(body))].join("\n");
 }
 
 export async function authenticateCompanion(path: string, envelope: CompanionEnvelope, body: unknown) {
@@ -61,5 +61,5 @@ export function policySnapshotPayload(policy: { revision: number; protectedBranc
     approval: rule ? { commitRequiresApproval: rule.commitRequiresApproval, pushRequiresApproval: rule.pushRequiresApproval, approvalQuorum: rule.approvalQuorum, allowSelfApproval: rule.allowSelfApproval, actionExpiryMinutes: rule.actionExpiryMinutes } : null,
   };
   const snapshot = { ...policyContent, issuedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString() };
-  return { snapshot, policyDigest: sha256(stableStringify(policyContent)) };
+  return { snapshot, policyDigest: sha256(canonicalJson(policyContent)) };
 }

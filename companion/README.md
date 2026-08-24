@@ -19,7 +19,30 @@ pnpm companion status --repo /path/to/repository --repository-id 12
 pnpm companion run --repo /path/to/repository --repository-id 12 --message "feat: local change" --dry-run
 ```
 
-`status` fetches and acknowledges the signed policy receipt, then reports only high-level safety metadata. `run --dry-run` performs the full policy and approval flow but **never stages, commits, or pushes**.
+`status` fetches and acknowledges the signed policy receipt, then submits one signed, metadata-only local status receipt to Studio. It includes the policy revision/digest, sanitized branch, safe-or-blocked outcome, controlled safety reasons, changed/eligible counts, CLI version, and observation time. It never includes file names, diffs, source contents, remotes, or credentials. Status freshness is visible for 15 minutes in Studio and is not a substitute for policy acknowledgement. `run --dry-run` performs the full policy and approval flow but **never stages, commits, or pushes**.
+
+## Download and verify a published release
+
+Use the Studio **Download Companion** page or the matching GitHub release tagged `companion-v<version>`. Published macOS, Linux, and Windows bundles require Node.js 20 or newer and contain the same local source entry point.
+
+Before extracting a published bundle, download `SHA256SUMS` from the same release and verify it:
+
+```bash
+shasum -a 256 -c SHA256SUMS
+# Linux alternative: sha256sum -c SHA256SUMS
+```
+
+The tag workflow generates GitHub provenance and keyless Sigstore bundles; no persistent private signing key is embedded in the source, package, or CI configuration. Verify an asset and its adjacent `.sigstore.json` bundle with the exact repository workflow identity published on the Download page, then verify GitHub provenance:
+
+```bash
+cosign verify-blob --bundle <asset>.sigstore.json \
+  --certificate-identity-regexp '<workflow-identity-regexp>' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com <asset>
+
+gh attestation verify <asset> -R PraiseTechzw/autopilot-studio
+```
+
+`pnpm companion:package` produces a deterministic local development bundle with `manifest.json` and `SHA256SUMS`; `pnpm companion:verify-release` revalidates those checksums. These local artifacts are deliberately **unsigned** and are not a replacement for a release workflow that has run on a protected GitHub tag.
 
 ## Safe local defaults
 

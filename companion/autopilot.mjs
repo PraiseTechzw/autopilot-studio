@@ -11,6 +11,7 @@ import { spawn } from "node:child_process";
 import { assessRepositorySafety, buildCommitGitCommands, buildPushGitCommand, createCandidateMetadata, createWatchGate, fingerprintRepository, git, matchesIgnore, parseOptions, parsePorcelain, scanFilesForSecrets, sha256 } from "./lib/cliCore.mjs";
 
 const configPath = process.env.AUTOPILOT_COMPANION_CONFIG || join(homedir(), ".config", "autopilot-studio", "companion.json");
+const CLI_VERSION = "1.0.0";
 const usage = `Autopilot Companion\n\nCommands:\n  pair <studio-url> <pairing-code> [label]  Pair this device using the secure reference flow\n  status --repo <path> --repository-id <id>  Inspect local safety and the current signed policy\n  run --repo <path> --repository-id <id> --message <text> [--push] [--wait-seconds 0] [--dry-run]\n  watch --repo <path> --repository-id <id> --message <text> --enable-watch [--execute] [--push] [--interval 20] [--settle-seconds 10]\n  config path | get <key> | set <key> <value>  Manage safe non-secret local defaults\n\nSafety defaults: run never pushes unless --push is supplied; watch requires --enable-watch and is dry-run unless --execute is supplied.`;
 
 function stable(value) {
@@ -82,6 +83,22 @@ async function submitReceipt(config, actionId, payloadDigest, outcome, extra = {
   return request(config.server, "/api/companion/receipts", { ...envelope(config, "/companion/submit-receipt", receipt), ...receipt });
 }
 
+async function submitStatusReceipt(config, repositoryId, policy, inspection) {
+  const status = {
+    repositoryId,
+    policyRevision: policy.snapshot.revision,
+    policyDigest: policy.policyDigest,
+    branch: inspection.branch || "HEAD",
+    safetyStatus: inspection.safety.safe ? "safe" : "blocked",
+    safetyReasons: inspection.safety.reasons,
+    changedFiles: inspection.changedFiles.length,
+    eligibleFiles: inspection.eligibleFiles.length,
+    companionVersion: CLI_VERSION,
+    observedAt: new Date().toISOString(),
+  };
+  return request(config.server, "/api/companion/status", { ...envelope(config, "/companion/status", status), status });
+}
+
 async function prepareApprovedAction({ config, repositoryId, repositoryPath, kind, waitSeconds }) {
   const policy = await fetchAndConfirmPolicy(config, repositoryId);
   const inspection = await inspectRepository(repositoryPath, policy, { allowCleanWorktree: kind === "push" });
@@ -150,7 +167,8 @@ async function showStatus(options) {
   const repositoryId = parseRepositoryId(options);
   const policy = await fetchAndConfirmPolicy(config, repositoryId);
   const inspection = await inspectRepository(repositoryPath, policy);
-  console.log(JSON.stringify({ branch: inspection.branch, changedFiles: inspection.changedFiles.length, eligibleFiles: inspection.eligibleFiles.length, policyRevision: policy.snapshot.revision, policyReceipt: "confirmed", safety: inspection.safety, secretRisk: inspection.secretRisk }, null, 2));
+  const receipt = await submitStatusReceipt(config, repositoryId, policy, inspection);
+  console.log(JSON.stringify({ branch: inspection.branch, changedFiles: inspection.changedFiles.length, eligibleFiles: inspection.eligibleFiles.length, policyRevision: policy.snapshot.revision, policyReceipt: "confirmed", statusReceipt: receipt.receiptId, safety: inspection.safety, secretRisk: inspection.secretRisk }, null, 2));
 }
 
 async function watchRepository(options) {

@@ -8,11 +8,12 @@ export function deriveOAuthFeedback(notice: OAuthNotice, connectionStatus?: stri
   return null;
 }
 
-export function deriveSetupMilestones(input: { connected: boolean; selectedRepositories: number; pairedDevices: number; currentSnapshots: number }) {
+export function deriveSetupMilestones(input: { connected: boolean; selectedRepositories: number; pairedDevices: number; currentSnapshots: number; freshLocalStatuses: number }) {
   return {
     githubConnected: input.connected,
     repositoryScopeReady: input.selectedRepositories > 0,
     companionPaired: input.pairedDevices > 0,
     policySyncCurrent: input.currentSnapshots > 0,
+    localStatusCurrent: input.freshLocalStatuses > 0,
   };
 }
