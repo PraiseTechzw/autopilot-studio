@@ -1,6 +1,6 @@
 # Vercel deployment
 
-Autopilot Studio runs as a single Vercel Node function backed by the Vite client build. The repository’s `vercel.json` runs `pnpm build`, bundles the complete Express dependency graph into `dist/vercel.js`, includes `dist/public`, and routes requests through the stable `api/index.js` function entrypoint. This prevents serverless runtime imports from resolving source-only TypeScript modules and preserves tRPC, OAuth, GitHub callback, Companion HTTP, and SPA fallback routes without opening a persistent port.
+Autopilot Studio runs as a single Vercel Node function backed by the Vite client build. The repository’s `vercel.json` runs `pnpm build`, bundles the complete Express dependency graph into `dist/vercel.js`, includes `dist/public`, and routes requests through the stable `api/index.js` function entrypoint. The serverless bundle imports only the production static helper, not Vite or Rollup, so it avoids source-only modules and build-tool native optional dependencies at runtime while preserving tRPC, OAuth, GitHub callback, Companion HTTP, and SPA fallback routes without opening a persistent port.
 
 ## GitHub integration
 
